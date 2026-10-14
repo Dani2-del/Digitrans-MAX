@@ -1,6 +1,7 @@
 package com.transcaribe.transcaribe.Controller;
 
 import com.transcaribe.transcaribe.Model.Tarjeta;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 import com.transcaribe.transcaribe.Model.Transaccion;
 import com.transcaribe.transcaribe.Model.Usuario;
 import com.transcaribe.transcaribe.Repository.UsuarioRepository;
@@ -10,13 +11,16 @@ import com.transcaribe.transcaribe.service.EmailService;
 import com.transcaribe.transcaribe.Util.TarifaTranscaribe;
 
 import java.util.Optional;
+import java.util.List;
 import java.math.BigDecimal;
 
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -40,6 +44,15 @@ public class TarjetaController {
     @Autowired
     private TransaccionService transaccionService;
 
+    @ModelAttribute
+    public void agregarTemaDelSistema(Model model, HttpSession session) {
+        Object sistema = session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE);
+        if (sistema instanceof SistemaTransporte sistemaActual && sistemaActual.estaDisponible()) {
+            model.addAttribute("sistemaActual", sistemaActual);
+            model.addAttribute("esTransmilenio", sistemaActual == SistemaTransporte.TRANSMILENIO);
+        }
+    }
+
     /**
      * Obtiene la instancia del usuario autenticado actualmente en la sesión.
      * 
@@ -57,13 +70,16 @@ public class TarjetaController {
      * @return Vista HTML 'recarga'
      */
     @GetMapping("/recarga")
-    public String recarga(Model model) {
+    public String recarga(Model model, HttpSession session) {
         Usuario usuario = obtenerUsuarioLogueado();
-        if (usuario != null) {
-            model.addAttribute("usuario", usuario);
-            model.addAttribute("tarjetas", usuario.getTarjetas());
+        if (usuario == null) {
+            return "redirect:/login";
         }
-        model.addAttribute("valorPasaje", TarifaTranscaribe.VALOR_PASAJE_COP);
+        SistemaTransporte sistema = obtenerSistemaActual(session);
+        if (sistema == null) {
+            return "redirect:/menu";
+        }
+        prepararDatosFormularioRecarga(model, usuario, sistema);
         model.addAttribute("cantidadPasajes", 1);
         return "usuarios/tarjetas/recarga";
     }
@@ -83,30 +99,38 @@ public class TarjetaController {
             @RequestParam(required = false) String numeroTarjetaPago,
             @RequestParam(required = false) String fechaVencimientoPago,
             @RequestParam(required = false) String cvvPago,
-            Model model) {
+            Model model,
+            HttpSession session) {
 
         Usuario usuario = obtenerUsuarioLogueado();
+        if (usuario == null) {
+            return "redirect:/login";
+        }
+        SistemaTransporte sistema = obtenerSistemaActual(session);
+        if (sistema == null) {
+            return "redirect:/menu";
+        }
 
         boolean recargaRapida = "RAPIDA".equalsIgnoreCase(modoRecarga);
         if (!recargaRapida && !"NORMAL".equalsIgnoreCase(modoRecarga)) {
             model.addAttribute("error", "Selecciona un tipo de recarga válido.");
-            prepararFormularioRecarga(model, usuario, modoRecarga, cantidadPasajes, monto);
+            prepararFormularioRecarga(model, usuario, sistema, modoRecarga, cantidadPasajes, monto);
             return "usuarios/tarjetas/recarga";
         }
         if (recargaRapida && (cantidadPasajes == null || cantidadPasajes <= 0)) {
             model.addAttribute("error", "La cantidad de pasajes debe ser al menos 1.");
-            prepararFormularioRecarga(model, usuario, modoRecarga, cantidadPasajes, monto);
+            prepararFormularioRecarga(model, usuario, sistema, modoRecarga, cantidadPasajes, monto);
             return "usuarios/tarjetas/recarga";
         }
         if (!recargaRapida && (monto == null || monto <= 0)) {
             model.addAttribute("error", "El monto de la recarga debe ser mayor que cero.");
-            prepararFormularioRecarga(model, usuario, modoRecarga, cantidadPasajes, monto);
+            prepararFormularioRecarga(model, usuario, sistema, modoRecarga, cantidadPasajes, monto);
             return "usuarios/tarjetas/recarga";
         }
 
         if (!"pse".equalsIgnoreCase(metodoPago) && !"tarjetaCredito".equalsIgnoreCase(metodoPago)) {
             model.addAttribute("error", "Selecciona un método de pago válido.");
-            prepararFormularioRecarga(model, usuario, modoRecarga, cantidadPasajes, monto);
+            prepararFormularioRecarga(model, usuario, sistema, modoRecarga, cantidadPasajes, monto);
             return "usuarios/tarjetas/recarga";
         }
 
@@ -114,7 +138,7 @@ public class TarjetaController {
         if ("pse".equalsIgnoreCase(metodoPago)) {
             if (correoPSE == null || correoPSE.isBlank() || contrasenaPSE == null || contrasenaPSE.isBlank()) {
                 model.addAttribute("error", "Por favor completa los datos de PSE.");
-                prepararFormularioRecarga(model, usuario, modoRecarga, cantidadPasajes, monto);
+                prepararFormularioRecarga(model, usuario, sistema, modoRecarga, cantidadPasajes, monto);
                 return "usuarios/tarjetas/recarga";
             }
         } else if ("tarjetaCredito".equalsIgnoreCase(metodoPago)) {
@@ -122,7 +146,7 @@ public class TarjetaController {
                 fechaVencimientoPago == null || fechaVencimientoPago.isBlank() || 
                 cvvPago == null || cvvPago.isBlank()) {
                 model.addAttribute("error", "Por favor completa los datos de la tarjeta de crédito.");
-                prepararFormularioRecarga(model, usuario, modoRecarga, cantidadPasajes, monto);
+                prepararFormularioRecarga(model, usuario, sistema, modoRecarga, cantidadPasajes, monto);
                 return "usuarios/tarjetas/recarga";
             }
         }
@@ -133,13 +157,13 @@ public class TarjetaController {
         String metodoPagoRegistro = pagoPse ? "PSE" : "Tarjeta de crédito/débito";
         Optional<Transaccion> transaccion = recargaRapida
                 ? service.recargarPasajesEnTarjetaConRecibo(
-                        usuario, numeroTarjeta, cantidadPasajes, metodoPagoRegistro, cuentaPse)
+                        usuario, numeroTarjeta, cantidadPasajes, metodoPagoRegistro, cuentaPse, sistema)
                 : service.recargarEnTarjetaConRecibo(
-                        usuario, numeroTarjeta, monto.doubleValue(), metodoPagoRegistro, cuentaPse);
+                        usuario, numeroTarjeta, monto.doubleValue(), metodoPagoRegistro, cuentaPse, sistema);
 
         if (transaccion.isEmpty()) {
             model.addAttribute("error", "Error en la recarga. Verifique los datos e intente de nuevo.");
-            prepararFormularioRecarga(model, usuario, modoRecarga, cantidadPasajes, monto);
+            prepararFormularioRecarga(model, usuario, sistema, modoRecarga, cantidadPasajes, monto);
             return "usuarios/tarjetas/recarga";
         }
 
@@ -164,19 +188,26 @@ public class TarjetaController {
 
         model.addAttribute("transaccion", transaccion.get());
         model.addAttribute("usuario", usuario);
+        model.addAttribute("sistemaActual", sistema);
         return "usuarios/tarjetas/Recarga-exitosa";
     }
 
-    private void prepararFormularioRecarga(Model model, Usuario usuario, String modoRecarga,
+    private void prepararFormularioRecarga(Model model, Usuario usuario, SistemaTransporte sistema,
+            String modoRecarga,
             Integer cantidadPasajes, Long monto) {
-        if (usuario != null) {
-            model.addAttribute("usuario", usuario);
-            model.addAttribute("tarjetas", usuario.getTarjetas());
-        }
-        model.addAttribute("valorPasaje", TarifaTranscaribe.VALOR_PASAJE_COP);
+        prepararDatosFormularioRecarga(model, usuario, sistema);
         model.addAttribute("modoRecarga", modoRecarga);
         model.addAttribute("cantidadPasajes", cantidadPasajes == null ? 1 : cantidadPasajes);
         model.addAttribute("monto", monto);
+    }
+
+    private void prepararDatosFormularioRecarga(Model model, Usuario usuario, SistemaTransporte sistema) {
+        if (usuario != null) {
+            model.addAttribute("usuario", usuario);
+            model.addAttribute("tarjetas", obtenerTarjetasDelSistema(usuario, sistema));
+        }
+        model.addAttribute("sistemaActual", sistema);
+        model.addAttribute("valorPasaje", TarifaTranscaribe.paraSistema(sistema));
     }
 
     /**
@@ -186,12 +217,18 @@ public class TarjetaController {
      * @return Vista HTML 'tarjetas'
      */
     @GetMapping("/tarjetas")
-    public String tarjetas(Model model) {
+    public String tarjetas(Model model, HttpSession session) {
         Usuario usuario = obtenerUsuarioLogueado();
-        if (usuario != null) {
-            model.addAttribute("usuario", usuario);
-            model.addAttribute("tarjetas", usuario.getTarjetas());
+        if (usuario == null) {
+            return "redirect:/login";
         }
+        SistemaTransporte sistema = obtenerSistemaActual(session);
+        if (sistema == null) {
+            return "redirect:/menu";
+        }
+        model.addAttribute("usuario", usuario);
+        model.addAttribute("tarjetasSistemaActual", obtenerTarjetasDelSistema(usuario, sistema));
+        model.addAttribute("sistemaActual", sistema);
         return "usuarios/tarjetas/tarjetas";
     }
 
@@ -200,7 +237,8 @@ public class TarjetaController {
      */
     @PostMapping("/tarjetas/agregar")
     public String agregarTarjeta(
-            @RequestParam String nuevoNumero, 
+            @RequestParam String nuevoNumero,
+            HttpSession session,
             RedirectAttributes redirectAttributes) {
 
         Usuario usuario = obtenerUsuarioLogueado();
@@ -208,7 +246,13 @@ public class TarjetaController {
             return "redirect:/login";
         }
 
-        String resultado = service.agregarNuevaTarjetaConValidacion(usuario.getId(), nuevoNumero);
+        SistemaTransporte sistema = obtenerSistemaActual(session);
+        if (sistema == null) {
+            return "redirect:/menu";
+        }
+
+        String resultado = service.agregarNuevaTarjetaConValidacion(
+                usuario.getId(), nuevoNumero, sistema);
         
         if ("OK".equals(resultado)) {
             redirectAttributes.addFlashAttribute("mensaje", "Tarjeta añadida correctamente ✅");
@@ -224,14 +268,22 @@ public class TarjetaController {
     @PostMapping("/tarjetas/eliminar")
     public String eliminarTarjeta(
             @RequestParam String numeroTarjeta, 
-            RedirectAttributes redirectAttributes) {
+            RedirectAttributes redirectAttributes,
+            HttpSession session) {
 
         Usuario usuario = obtenerUsuarioLogueado();
         if (usuario == null) {
             return "redirect:/login";
         }
 
-        boolean eliminado = service.eliminarTarjetaDeUsuario(usuario.getId(), numeroTarjeta);
+        SistemaTransporte sistema = obtenerSistemaActual(session);
+        if (sistema == null) {
+            return "redirect:/menu";
+        }
+        boolean perteneceAlSistema = obtenerTarjetasDelSistema(usuario, sistema).stream()
+                .anyMatch(tarjeta -> numeroTarjeta.equals(tarjeta.getNumeroTarjeta()));
+        boolean eliminado = perteneceAlSistema
+                && service.eliminarTarjetaDeUsuario(usuario.getId(), numeroTarjeta);
         
         if (eliminado) {
             redirectAttributes.addFlashAttribute("mensaje", "Tarjeta eliminada ✅");
@@ -245,13 +297,18 @@ public class TarjetaController {
      * Renderiza el formulario para establecer la alerta de límite de saldo mínimo.
      */
     @GetMapping("/limite-saldo")
-    public String mostrarFormularioLimiteSaldo(Model model) {
+    public String mostrarFormularioLimiteSaldo(Model model, HttpSession session) {
         Usuario usuario = obtenerUsuarioLogueado();
         if (usuario == null) {
             return "redirect:/login";
         }
+        SistemaTransporte sistema = obtenerSistemaActual(session);
+        if (sistema == null) {
+            return "redirect:/menu";
+        }
         model.addAttribute("usuario", usuario);
-        model.addAttribute("tarjetas", usuario.getTarjetas());
+        model.addAttribute("tarjetas", obtenerTarjetasDelSistema(usuario, sistema));
+        model.addAttribute("sistemaActual", sistema);
         return "usuarios/tarjetas/limite-saldo";
     }
 
@@ -262,14 +319,22 @@ public class TarjetaController {
     public String configurarLimiteSaldoWeb(
             @RequestParam String numeroTarjeta,
             @RequestParam BigDecimal limiteSaldo,
-            RedirectAttributes redirectAttributes) {
+            RedirectAttributes redirectAttributes,
+            HttpSession session) {
 
         Usuario usuario = obtenerUsuarioLogueado();
         if (usuario == null) {
             return "redirect:/login";
         }
 
-        boolean exito = service.establecerLimiteSaldo(usuario, numeroTarjeta, limiteSaldo);
+        SistemaTransporte sistema = obtenerSistemaActual(session);
+        if (sistema == null) {
+            return "redirect:/menu";
+        }
+        boolean perteneceAlSistema = obtenerTarjetasDelSistema(usuario, sistema).stream()
+                .anyMatch(tarjeta -> numeroTarjeta.equals(tarjeta.getNumeroTarjeta()));
+        boolean exito = perteneceAlSistema
+                && service.establecerLimiteSaldo(usuario, numeroTarjeta, limiteSaldo);
 
         if (exito) {
             redirectAttributes.addFlashAttribute("mensaje", "¡Alerta de saldo mínimo configurada correctamente! 🔔");
@@ -278,6 +343,19 @@ public class TarjetaController {
         }
 
         return "redirect:/limite-saldo";
+    }
+
+    private SistemaTransporte obtenerSistemaActual(HttpSession session) {
+        Object sistema = session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE);
+        return sistema instanceof SistemaTransporte seleccionado && seleccionado.estaDisponible()
+                ? seleccionado
+                : null;
+    }
+
+    private List<Tarjeta> obtenerTarjetasDelSistema(Usuario usuario, SistemaTransporte sistema) {
+        return usuario.getTarjetas().stream()
+                .filter(tarjeta -> tarjeta.getSistemaTransporte() == sistema)
+                .toList();
     }
 
     /**

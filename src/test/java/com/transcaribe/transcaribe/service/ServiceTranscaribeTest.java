@@ -20,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.mail.MailSendException;
 
 import com.transcaribe.transcaribe.Model.Transaccion;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 import com.transcaribe.transcaribe.Model.Usuario;
 import com.transcaribe.transcaribe.Repository.TransaccionRepository;
 import com.transcaribe.transcaribe.Repository.UsuarioRepository;
@@ -78,6 +79,49 @@ class ServiceTranscaribeTest {
         assertNull(transaccion.get().getCantidadPasajes());
         assertEquals(0, new BigDecimal("12500").compareTo(usuario.getTarjetas().get(0).getSaldo()));
         verify(repositorioTransacciones).save(any(Transaccion.class));
+    }
+
+    @Test
+    void recargaTransmilenioSoloEnUnaTarjetaTransmilenioYMarcaLaTransaccion() {
+        ServiceTranscaribe service = new ServiceTranscaribe(
+                repositorioUsuarios,
+                new TransaccionService(repositorioTransacciones),
+                passwordEncoder,
+                null);
+        Usuario usuario = new Usuario("pasajero@example.com", "hash", "Pasajero");
+        usuario.agregarTarjeta("1234567890", BigDecimal.ZERO, SistemaTransporte.TRANSCARIBE);
+        usuario.agregarTarjeta("0987654321", BigDecimal.ZERO, SistemaTransporte.TRANSMILENIO);
+        when(repositorioTransacciones.save(any(Transaccion.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        var transaccion = service.recargarPasajesEnTarjetaConRecibo(
+                usuario, "0987654321", 2, "PSE", "pasajero.pse@example.com",
+                SistemaTransporte.TRANSMILENIO);
+
+        assertTrue(transaccion.isPresent());
+        assertEquals(7800.0, transaccion.get().getMonto());
+        assertEquals(SistemaTransporte.TRANSMILENIO, transaccion.get().getSistemaTransporte());
+        assertEquals(BigDecimal.ZERO, usuario.getTarjetas().get(0).getSaldo());
+        assertEquals(0, new BigDecimal("7800").compareTo(usuario.getTarjetas().get(1).getSaldo()));
+        verify(repositorioTransacciones).save(any(Transaccion.class));
+    }
+
+    @Test
+    void impideRecargarUnaTarjetaDeOtroSistema() {
+        ServiceTranscaribe service = new ServiceTranscaribe(
+                repositorioUsuarios,
+                new TransaccionService(repositorioTransacciones),
+                passwordEncoder,
+                null);
+        Usuario usuario = new Usuario("pasajero@example.com", "hash", "Pasajero");
+        usuario.agregarTarjeta("1234567890", BigDecimal.ZERO, SistemaTransporte.TRANSCARIBE);
+
+        var transaccion = service.recargarEnTarjetaConRecibo(
+                usuario, "1234567890", 10000, "PSE", "pasajero.pse@example.com",
+                SistemaTransporte.TRANSMILENIO);
+
+        assertTrue(transaccion.isEmpty());
+        assertEquals(BigDecimal.ZERO, usuario.getTarjetas().get(0).getSaldo());
     }
 
     @Test

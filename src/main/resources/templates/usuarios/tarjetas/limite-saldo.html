@@ -6,14 +6,15 @@
     <title>Configurar Límite de Saldo - Digitrans</title>
     <th:block th:replace="~{fragments/loading-indicator :: styles}"></th:block>
 </head>
-<body class="menu-page">
+<body class="menu-page" th:attr="data-sistema=${sistemaActual}">
     <div class="page">
         <div th:replace="~{fragments/header :: header}"></div>
 
         <main class="center-card">
             <div class="card dashboard" style="max-width: 480px; margin: 0 auto; padding: 25px;">
                 
-                <h2 style="color: #ff8c00; margin-bottom: 10px; text-align: center;">⚠️ Alertas de Saldo Bajo</h2>
+                <h2 style="margin-bottom: 10px; text-align: center;">⚠️ Alertas de Saldo Bajo</h2>
+                <p style="text-align:center;">Sistema activo: <strong th:text="${sistemaActual.nombre}">Transcaribe</strong></p>
                 <p style="color: #666; font-size: 0.95rem; text-align: center; margin-bottom: 20px;">
                     Define un umbral de saldo mínimo. Si el saldo de tu tarjeta cae por debajo de esta cantidad tras un cobro, te enviaremos una notificación a tu correo.
                 </p>
@@ -26,9 +27,9 @@
                             Seleccionar Tarjeta:
                         </label>
                         <select name="numeroTarjeta" required
-                                style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #ffd8a8; background: #fafafa; font-size: 1rem; color: #333;">
+                                style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid var(--linea); background: #fafafa; font-size: 1rem; color: var(--tinta);">
                             <option value="" disabled selected>Selecciona una tarjeta...</option>
-                            <option th:each="t : ${usuario.tarjetas}"
+                            <option th:each="t : ${tarjetas}"
                                     th:value="${t.numeroTarjeta}"
                                     th:text="${'💳 ' + t.numeroTarjeta + ' (Saldo: $' + #numbers.formatDecimal(t.saldo, 0, 'COMMA', 0, 'POINT') + ' | Límite actual: $' + (t.limiteSaldo != null ? #numbers.formatDecimal(t.limiteSaldo, 0, 'COMMA', 0, 'POINT') : 'Sin definir') + ')'}">
                             </option>
@@ -40,11 +41,11 @@
                             Límite Mínimo Deseado ($ COP):
                         </label>
                         <input type="number" name="limiteSaldo" min="0" step="500" placeholder="Ej. 6000" required
-                               style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #ffd8a8; background: #fafafa; font-size: 1rem; box-sizing: border-box;" />
+                               style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid var(--linea); background: #fafafa; font-size: 1rem; box-sizing: border-box;" />
                     </div>
 
-                    <button type="submit" class="card-btn"
-                            style="width: 100%; padding: 14px; background: #ff8c00; color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 1rem; cursor: pointer; margin-bottom: 10px;">
+                    <button type="submit" class="primary"
+                            style="width: 100%; padding: 14px; border-radius: 10px; font-size: 1rem; cursor: pointer; margin-bottom: 10px;">
                         Guardar Configuración
                     </button>
                     
@@ -58,8 +59,7 @@
                     <p class="success" th:if="${mensaje}" th:text="${mensaje}" 
                        style="color: #28a745; font-weight: bold; background: #e8f5e9; padding: 10px; border-radius: 8px; margin: 0;">
                     </p>
-                    <p class="error" th:if="${error}" th:text="${error}" 
-                       style="color: #dc3545; font-weight: bold; background: #ffebee; padding: 10px; border-radius: 8px; margin: 0;">
+                    <p class="error" th:if="${error}" th:text="${error}">
                     </p>
                 </div>
 

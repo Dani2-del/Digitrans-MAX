@@ -4,6 +4,7 @@ import com.transcaribe.transcaribe.Model.Bus;
 import com.transcaribe.transcaribe.Model.Tarjeta;
 import com.transcaribe.transcaribe.Model.Transaccion;
 import com.transcaribe.transcaribe.Model.Usuario;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 import com.transcaribe.transcaribe.Repository.BusRepository;
 import com.transcaribe.transcaribe.Repository.TransaccionRepository;
 import com.transcaribe.transcaribe.Repository.UsuarioRepository;
@@ -41,11 +42,20 @@ public class BusService {
     }
 
     public String pagarPasajeConTarjetaEspecifica(String usuarioId, String busId, String numeroTarjeta) {
+        return pagarPasajeConTarjetaEspecifica(
+                usuarioId, busId, numeroTarjeta, SistemaTransporte.TRANSCARIBE);
+    }
+
+    public String pagarPasajeConTarjetaEspecifica(
+            String usuarioId, String busId, String numeroTarjeta, SistemaTransporte sistemaTransporte) {
     Usuario usuario = usuarioRepository.findById(usuarioId)
             .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
         Bus bus = busRepository.findById(busId)
             .orElseThrow(() -> new RuntimeException("Bus no encontrado"));
 
+    if (sistemaTransporte == null || !sistemaTransporte.estaDisponible()) {
+        return "El sistema de transporte seleccionado no está disponible.";
+    }
     if (bus.getRutas() == null || bus.getRutas().isEmpty()) {
         return "Este bus no tiene rutas asignadas.";
     }
@@ -53,10 +63,11 @@ public class BusService {
     Random rand = new Random();
     String rutaSeleccionada = bus.getRutas().get(rand.nextInt(bus.getRutas().size()));
 
-    BigDecimal costo = BigDecimal.valueOf(TarifaTranscaribe.VALOR_PASAJE_COP);
+    BigDecimal costo = BigDecimal.valueOf(TarifaTranscaribe.paraSistema(sistemaTransporte));
 
     Tarjeta tarjetaSeleccionada = usuario.getTarjetas().stream()
-            .filter(t -> t.getNumeroTarjeta().equals(numeroTarjeta))
+            .filter(t -> numeroTarjeta.equals(t.getNumeroTarjeta()))
+            .filter(t -> t.getSistemaTransporte() == sistemaTransporte)
             .findFirst()
             .orElse(null);
 
@@ -77,6 +88,7 @@ public class BusService {
             "PASAJE [" + numeroTarjeta + "] - Ruta: " + rutaSeleccionada, 
             usuario
         );
+        t.setSistemaTransporte(sistemaTransporte);
         transaccionRepository.save(t);
 
         return "Cobro exitoso. Ruta: " + rutaSeleccionada + 
@@ -96,4 +108,3 @@ public class BusService {
                 .collect(Collectors.toList());
     }
 }
-

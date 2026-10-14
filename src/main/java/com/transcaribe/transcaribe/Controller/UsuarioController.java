@@ -1,6 +1,7 @@
 package com.transcaribe.transcaribe.Controller;
 
 import com.transcaribe.transcaribe.Model.Usuario;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 import com.transcaribe.transcaribe.Model.Transaccion;
 import com.transcaribe.transcaribe.Model.PreferenciaRutaNotificacion;
 import com.transcaribe.transcaribe.Repository.UsuarioRepository;
@@ -40,6 +41,7 @@ import org.springframework.web.server.ResponseStatusException;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
 import java.time.LocalTime;
@@ -78,13 +80,25 @@ public class UsuarioController {
     @Autowired
     private AvisoAdministrativoService avisoAdministrativoService;
 
+    @ModelAttribute
+    public void agregarTemaDelSistema(Model model, HttpSession session) {
+        Object sistema = session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE);
+        if (sistema instanceof SistemaTransporte sistemaActual && sistemaActual.estaDisponible()) {
+            model.addAttribute("sistemaActual", sistemaActual);
+            model.addAttribute("esTransmilenio", sistemaActual == SistemaTransporte.TRANSMILENIO);
+        }
+    }
+
     private Usuario obtenerUsuarioLogueado() {
         String correo = SecurityContextHolder.getContext().getAuthentication().getName();
         return usuarioRepository.findByCorreo(correo).orElse(null);
     }
 
     @GetMapping("/menu")
-    public String menu(Model model) {
+    public String menu(
+            @RequestParam(required = false) SistemaTransporte sistema,
+            Model model,
+            HttpSession session) {
         Usuario usuario = obtenerUsuarioLogueado();
         
         if (usuario == null) {
@@ -95,12 +109,43 @@ public class UsuarioController {
             return "redirect:/verificar-otp?correo=" + usuario.getCorreo();
         }
 
+        if (sistema != null && sistema.estaDisponible()) {
+            session.setAttribute(SistemaTransporte.SESSION_ATTRIBUTE, sistema);
+        }
+        Object sistemaGuardado = session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE);
+        if (!(sistemaGuardado instanceof SistemaTransporte sistemaActual)
+                || !sistemaActual.estaDisponible()) {
+            model.addAttribute("sistemasTransporte", SistemaTransporte.disponibles());
+            model.addAttribute("usuario", usuario);
+            return "usuarios/cuenta/seleccionar-sistema";
+        }
+
         service.procesarNotificacionLogin(usuario.getCorreo());
-        
+        List<com.transcaribe.transcaribe.Model.Tarjeta> tarjetasSistema =
+                usuario.getTarjetas().stream()
+                        .filter(tarjeta -> tarjeta.getSistemaTransporte() == sistemaActual)
+                        .toList();
         model.addAttribute("usuario", usuario);
+        model.addAttribute("tarjetasSistemaActual", tarjetasSistema);
+        model.addAttribute("saldoSistemaActual", tarjetasSistema.stream()
+                .map(com.transcaribe.transcaribe.Model.Tarjeta::getSaldo)
+                .filter(saldo -> saldo != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        model.addAttribute("sistemaActual", sistemaActual);
+        model.addAttribute("esTransmilenio", sistemaActual == SistemaTransporte.TRANSMILENIO);
+        model.addAttribute("sistemasTransporte", SistemaTransporte.disponibles());
         model.addAttribute("alertasAdmin", avisoAdministrativoService.obtenerPendientes(usuario.getId()));
         model.addAttribute("alertaReturnTo", "/menu");
         return "usuarios/cuenta/menu";
+    }
+
+    @PostMapping("/menu/sistema")
+    public String seleccionarSistema(@RequestParam SistemaTransporte sistema, HttpSession session) {
+        if (!sistema.estaDisponible()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sistema de transporte no disponible.");
+        }
+        session.setAttribute(SistemaTransporte.SESSION_ATTRIBUTE, sistema);
+        return "redirect:/menu";
     }
 
     @GetMapping("/perfil")
@@ -297,26 +342,38 @@ public class UsuarioController {
                             @RequestParam(defaultValue = "false") boolean buscarPorTarjeta,
                             @RequestParam(required = false) Integer tarjetaSeleccionada,
                             @RequestParam(defaultValue = "0") int page,
-                            Model model) {
+                            Model model,
+                            HttpSession session) {
         Usuario usuario = obtenerUsuarioLogueado();
         
         if (usuario == null) {
             return "redirect:/login";
         }
+        SistemaTransporte sistemaActual = obtenerSistemaActual(session);
+        if (sistemaActual == null) {
+            return "redirect:/menu";
+        }
 
+        List<com.transcaribe.transcaribe.Model.Tarjeta> tarjetasSistema =
+                usuario.getTarjetas().stream()
+                        .filter(tarjeta -> tarjeta.getSistemaTransporte() == sistemaActual)
+                        .toList();
         boolean filtrarPorTarjeta = buscarPorTarjeta || tarjetaSeleccionada != null;
         model.addAttribute("usuario", usuario);
+        model.addAttribute("tarjetasSistemaActual", tarjetasSistema);
+        model.addAttribute("sistemaActual", sistemaActual);
         List<com.transcaribe.transcaribe.Model.Transaccion> filtradas =
                 transaccionService.obtenerTransaccionesPorUsuario(usuario).stream()
+                        .filter(t -> t.getSistemaTransporte() == sistemaActual)
                         .filter(t -> buscar.isBlank()
                                 || (t.getTipo() != null && t.getTipo().toLowerCase(Locale.ROOT)
                                         .contains(buscar.trim().toLowerCase(Locale.ROOT))))
                         .filter(t -> !filtrarPorTarjeta
                                 || (tarjetaSeleccionada != null
                                         && tarjetaSeleccionada >= 0
-                                        && tarjetaSeleccionada < usuario.getTarjetas().size()
+                                        && tarjetaSeleccionada < tarjetasSistema.size()
                                         && coincideTarjeta(
-                                                t, usuario.getTarjetas().get(tarjetaSeleccionada).getNumeroTarjeta())))
+                                                t, tarjetasSistema.get(tarjetaSeleccionada).getNumeroTarjeta())))
                         .filter(t -> tipo.isBlank() || coincideTipo(t.getTipo(), tipo))
                         .toList();
         int totalPages = Math.max(1, (int) Math.ceil(filtradas.size() / 10.0));
@@ -331,6 +388,13 @@ public class UsuarioController {
         model.addAttribute("currentPage", paginaSegura);
         model.addAttribute("totalPages", totalPages);
         return "usuarios/cuenta/historial";
+    }
+
+    private SistemaTransporte obtenerSistemaActual(HttpSession session) {
+        Object sistema = session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE);
+        return sistema instanceof SistemaTransporte seleccionado && seleccionado.estaDisponible()
+                ? seleccionado
+                : null;
     }
 
     private boolean coincideTarjeta(Transaccion transaccion, String numeroTarjeta) {
@@ -378,14 +442,22 @@ public class UsuarioController {
     }
 
     @GetMapping("/historial/{id}/recibo")
-    public ResponseEntity<byte[]> descargarRecibo(@PathVariable String id) throws IOException {
+    public ResponseEntity<byte[]> descargarRecibo(
+            @PathVariable String id, HttpSession session) throws IOException {
         Usuario usuario = obtenerUsuarioLogueado();
         if (usuario == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        SistemaTransporte sistemaActual = obtenerSistemaActual(session);
+        if (sistemaActual == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
         Transaccion transaccion = transaccionService.obtenerTransaccionDeUsuario(id, usuario)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (transaccion.getSistemaTransporte() != sistemaActual) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
         byte[] pdf = reciboPdfService.generarRecibo(transaccion);
 
         HttpHeaders headers = new HttpHeaders();
@@ -413,11 +485,15 @@ public class UsuarioController {
     @GetMapping("/rutas")
     public String rutas(@RequestParam(defaultValue = "") String buscar,
                         @RequestParam(defaultValue = "0") int page,
-                        Model model) {
+                        Model model,
+                        HttpSession session) {
         Usuario usuario = obtenerUsuarioLogueado();
 
         if (usuario == null) {
             return "redirect:/login";
+        }
+        if (esTransmilenioSeleccionado(session)) {
+            return "redirect:/menu";
         }
 
         model.addAttribute("usuario", usuario);
@@ -441,11 +517,14 @@ public class UsuarioController {
     }
 
     @PostMapping("/rutas/favorito/agregar")
-    public String agregarFavorito(@RequestParam String ruta, Model model) {
+    public String agregarFavorito(@RequestParam String ruta, HttpSession session) {
         Usuario usuario = obtenerUsuarioLogueado();
 
         if (usuario == null) {
             return "redirect:/login";
+        }
+        if (esTransmilenioSeleccionado(session)) {
+            return "redirect:/menu";
         }
 
         usuario.agregarRutaFavorita(ruta);
@@ -455,11 +534,14 @@ public class UsuarioController {
     }
 
     @PostMapping("/rutas/favorito/eliminar")
-    public String eliminarFavorito(@RequestParam String ruta, Model model) {
+    public String eliminarFavorito(@RequestParam String ruta, HttpSession session) {
         Usuario usuario = obtenerUsuarioLogueado();
 
         if (usuario == null) {
             return "redirect:/login";
+        }
+        if (esTransmilenioSeleccionado(session)) {
+            return "redirect:/menu";
         }
 
         usuario.eliminarRutaFavorita(ruta);
@@ -474,10 +556,14 @@ public class UsuarioController {
             @RequestParam(defaultValue = "false") boolean notificacionesActivas,
             @RequestParam String horaDesde,
             @RequestParam String horaHasta,
-            org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
+            org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes,
+            HttpSession session) {
         Usuario usuario = obtenerUsuarioLogueado();
         if (usuario == null) {
             return "redirect:/login";
+        }
+        if (esTransmilenioSeleccionado(session)) {
+            return "redirect:/menu";
         }
         if (!usuario.getRutasFavoritas().contains(ruta)) {
             redirectAttributes.addFlashAttribute("error", "Solo puedes configurar notificaciones para rutas favoritas.");
@@ -504,5 +590,9 @@ public class UsuarioController {
             redirectAttributes.addFlashAttribute("error", "Selecciona un rango horario válido.");
         }
         return "redirect:/rutas";
+    }
+
+    private boolean esTransmilenioSeleccionado(HttpSession session) {
+        return session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE) == SistemaTransporte.TRANSMILENIO;
     }
 }

@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.transcaribe.transcaribe.Model.Tarjeta;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 import com.transcaribe.transcaribe.Model.Transaccion;
 import com.transcaribe.transcaribe.Model.Usuario;
 import com.transcaribe.transcaribe.Repository.UsuarioRepository;
@@ -156,26 +157,54 @@ public class ServiceTranscaribe {
 
     public Optional<Transaccion> recargarEnTarjetaConRecibo(
             Usuario usuario, String numeroTarjeta, double monto, String metodoPago, String cuentaPse) {
-        return recargarEnTarjetaConRecibo(usuario, numeroTarjeta, monto, metodoPago, cuentaPse, null);
+        return recargarEnTarjetaConRecibo(
+                usuario, numeroTarjeta, monto, metodoPago, cuentaPse, SistemaTransporte.TRANSCARIBE);
+    }
+
+    public Optional<Transaccion> recargarEnTarjetaConRecibo(
+            Usuario usuario, String numeroTarjeta, double monto, String metodoPago, String cuentaPse,
+            SistemaTransporte sistemaTransporte) {
+        return recargarEnTarjetaConRecibo(
+                usuario, numeroTarjeta, monto, metodoPago, cuentaPse, null, sistemaTransporte);
     }
 
     public Optional<Transaccion> recargarPasajesEnTarjetaConRecibo(
             Usuario usuario, String numeroTarjeta, int cantidadPasajes, String metodoPago, String cuentaPse) {
-        if (cantidadPasajes <= 0) {
+        return recargarPasajesEnTarjetaConRecibo(
+                usuario, numeroTarjeta, cantidadPasajes, metodoPago, cuentaPse, SistemaTransporte.TRANSCARIBE);
+    }
+
+    public Optional<Transaccion> recargarPasajesEnTarjetaConRecibo(
+            Usuario usuario, String numeroTarjeta, int cantidadPasajes, String metodoPago,
+            String cuentaPse, SistemaTransporte sistemaTransporte) {
+        if (cantidadPasajes <= 0 || sistemaTransporte == null || !sistemaTransporte.estaDisponible()) {
             return Optional.empty();
         }
-        long monto = Math.multiplyExact((long) cantidadPasajes, TarifaTranscaribe.VALOR_PASAJE_COP);
+        long monto = Math.multiplyExact((long) cantidadPasajes,
+                TarifaTranscaribe.paraSistema(sistemaTransporte));
         return recargarEnTarjetaConRecibo(
-                usuario, numeroTarjeta, (double) monto, metodoPago, cuentaPse, cantidadPasajes);
+                usuario, numeroTarjeta, (double) monto, metodoPago, cuentaPse,
+                cantidadPasajes, sistemaTransporte);
     }
 
     private Optional<Transaccion> recargarEnTarjetaConRecibo(
             Usuario usuario, String numeroTarjeta, double monto, String metodoPago,
             String cuentaPse, Integer cantidadPasajes) {
-        if (usuario == null || !usuario.isActivo() || monto <= 0) return Optional.empty();
+        return recargarEnTarjetaConRecibo(usuario, numeroTarjeta, monto, metodoPago,
+                cuentaPse, cantidadPasajes, SistemaTransporte.TRANSCARIBE);
+    }
+
+    private Optional<Transaccion> recargarEnTarjetaConRecibo(
+            Usuario usuario, String numeroTarjeta, double monto, String metodoPago,
+            String cuentaPse, Integer cantidadPasajes, SistemaTransporte sistemaTransporte) {
+        if (usuario == null || !usuario.isActivo() || monto <= 0
+                || sistemaTransporte == null || !sistemaTransporte.estaDisponible()) {
+            return Optional.empty();
+        }
 
         return usuario.getTarjetas().stream()
-                .filter(t -> t.getNumeroTarjeta().equals(numeroTarjeta))
+                .filter(t -> numeroTarjeta.equals(t.getNumeroTarjeta()))
+                .filter(t -> t.getSistemaTransporte() == sistemaTransporte)
                 .findFirst()
                 .map(t -> {
                     t.setSaldo(t.getSaldo().add(BigDecimal.valueOf(monto)));
@@ -187,7 +216,8 @@ public class ServiceTranscaribe {
                             metodoPago,
                             cuentaPse,
                             ocultarNumeroTarjeta(numeroTarjeta),
-                            cantidadPasajes);
+                            cantidadPasajes,
+                            sistemaTransporte);
                 });
     }
 
@@ -372,12 +402,17 @@ public class ServiceTranscaribe {
      * Vincula una nueva tarjeta simple al usuario.
      */
     public boolean agregarNuevaTarjeta(String idUsuario, String nuevoNumero) {
+        return agregarNuevaTarjeta(idUsuario, nuevoNumero, SistemaTransporte.TRANSCARIBE);
+    }
+
+    public boolean agregarNuevaTarjeta(
+            String idUsuario, String nuevoNumero, SistemaTransporte sistemaTransporte) {
         Optional<Usuario> opt = repositorioUsuarios.findById(idUsuario);
         if (opt.isPresent()) {
             Usuario u = opt.get();
             boolean existe = u.getTarjetas().stream().anyMatch(t -> t.getNumeroTarjeta().equals(nuevoNumero));
             if (!existe) {
-                u.agregarTarjeta(nuevoNumero, BigDecimal.ZERO);
+                u.agregarTarjeta(nuevoNumero, BigDecimal.ZERO, sistemaTransporte);
                 repositorioUsuarios.save(u);
                 return true;
             }
@@ -397,6 +432,11 @@ public class ServiceTranscaribe {
      * Vincula una nueva tarjeta verificando la no existencia global en la base de datos.
      */
     public String agregarNuevaTarjetaConValidacion(String idUsuario, String nuevoNumero) {
+        return agregarNuevaTarjetaConValidacion(idUsuario, nuevoNumero, SistemaTransporte.TRANSCARIBE);
+    }
+
+    public String agregarNuevaTarjetaConValidacion(
+            String idUsuario, String nuevoNumero, SistemaTransporte sistemaTransporte) {
         Optional<Usuario> dueñoExistente = repositorioUsuarios.findByNumeroTarjetaEnLista(nuevoNumero);
         
         if (dueñoExistente.isPresent()) {
@@ -411,7 +451,7 @@ public class ServiceTranscaribe {
                     .anyMatch(t -> t.getNumeroTarjeta().equals(nuevoNumero));
             
             if (!yaLaTiene) {
-                u.agregarTarjeta(nuevoNumero, BigDecimal.ZERO);
+                u.agregarTarjeta(nuevoNumero, BigDecimal.ZERO, sistemaTransporte);
                 repositorioUsuarios.save(u);
                 return "OK";
             } else {

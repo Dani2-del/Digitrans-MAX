@@ -41,7 +41,8 @@ public class ReciboPdfService {
                 float margin = 54;
                 float y = page.getMediaBox().getHeight() - 72;
 
-                writeLine(content, PDType1Font.HELVETICA_BOLD, 20, margin, y, "TRANSCARIBE");
+                String sistema = transaccion.getSistemaTransporte().getNombre().toUpperCase(Locale.ROOT);
+                writeLine(content, PDType1Font.HELVETICA_BOLD, 20, margin, y, sistema);
                 y -= 32;
                 writeLine(content, PDType1Font.HELVETICA_BOLD, 15, margin, y, "RECIBO DE TRANSACCION");
                 y -= 34;
@@ -76,13 +77,13 @@ public class ReciboPdfService {
                         "Cuenta PSE: " + safeText(transaccion.getCuentaPse()));
                 y -= 20;
                 writeLine(content, PDType1Font.HELVETICA, 11, margin, y,
-                        "Tarjeta Transcaribe: " + safeText(transaccion.getTarjetaTranscaribe()));
+                        "Tarjeta de transporte: " + safeText(transaccion.getTarjetaTranscaribe()));
                 y -= 30;
                 writeLine(content, PDType1Font.HELVETICA_BOLD, 14, margin, y,
                         "Monto: COP $" + formatoMonto.format(transaccion.getMonto()));
                 y -= 48;
                 writeLine(content, PDType1Font.HELVETICA_OBLIQUE, 9, margin, y,
-                        "Comprobante informativo de una transaccion registrada en Transcaribe.");
+                        "Comprobante informativo de una transaccion registrada en " + sistema + ".");
             }
 
             document.save(output);

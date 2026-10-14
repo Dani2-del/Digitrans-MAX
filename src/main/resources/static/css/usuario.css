@@ -1402,6 +1402,15 @@ body::after {
   box-shadow: 0 16px 30px rgba(183, 92, 22, 0.11);
 }
 
+.dashboard-action.is-disabled,
+.dashboard-action.is-disabled:hover {
+  opacity: 0.58;
+  cursor: not-allowed;
+  transform: none;
+  border-color: var(--linea);
+  box-shadow: none;
+}
+
 .dashboard-action:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--action-color) 55%, white);
   outline-offset: 3px;
@@ -1449,6 +1458,253 @@ body::after {
 .action-routes { --action-color: #1b9675; --action-tint: #e8f7f1; }
 .action-profile { --action-color: #d58920; --action-tint: #fff5e5; }
 .action-alerts { --action-color: #d45b77; --action-tint: #fff0f3; }
+
+body[data-sistema="TRANSMILENIO"] {
+  --tinta: #8f172b;
+  --tinta-2: #681020;
+  --caribe: #c8102e;
+  --caribe-soft: #fce8eb;
+  --coral: #c8102e;
+  --coral-2: #a50f26;
+  --mango: #f2c500;
+  --mango-soft: #fff8d6;
+  --arena: #fffaf0;
+  --linea: rgba(143, 23, 43, 0.16);
+}
+
+body[data-sistema="TRANSMILENIO"] .navbar {
+  background: var(--coral) !important;
+  background-image: none !important;
+  border-bottom: 3px solid var(--mango);
+  box-shadow: 0 6px 18px rgba(143, 23, 43, 0.25);
+}
+
+body[data-sistema="TRANSMILENIO"] .navbar .brand h1,
+body[data-sistema="TRANSMILENIO"] .navbar-right .nav-link,
+body[data-sistema="TRANSMILENIO"] .sub-links a {
+  color: white;
+}
+
+body[data-sistema="TRANSMILENIO"] .menu-page .dashboard-welcome {
+  background: var(--coral) !important;
+  background-image: none !important;
+  box-shadow: 0 18px 42px rgba(143, 23, 43, 0.22);
+}
+
+body[data-sistema="TRANSMILENIO"] .dashboard-welcome::before,
+body[data-sistema="TRANSMILENIO"] .dashboard-welcome::after {
+  border-color: rgba(255, 248, 214, 0.2);
+}
+
+body[data-sistema="TRANSMILENIO"] .dashboard-welcome .dashboard-eyebrow,
+body[data-sistema="TRANSMILENIO"] .dashboard-welcome .welcome-mark {
+  color: var(--mango);
+}
+
+body[data-sistema="TRANSMILENIO"] .dashboard-welcome h1 {
+  color: var(--mango);
+}
+
+body[data-sistema="TRANSMILENIO"] .dashboard-welcome p {
+  color: var(--mango-soft);
+}
+
+body[data-sistema="TRANSMILENIO"] .card {
+  border-color: var(--linea);
+}
+
+body[data-sistema="TRANSMILENIO"] .primary,
+body[data-sistema="TRANSMILENIO"] .btn-recargar,
+body[data-sistema="TRANSMILENIO"] .bus-btn {
+  background: var(--coral) !important;
+  box-shadow: 0 6px 16px rgba(200, 16, 46, 0.25) !important;
+}
+
+body[data-sistema="TRANSMILENIO"] .primary:hover,
+body[data-sistema="TRANSMILENIO"] .btn-recargar:hover,
+body[data-sistema="TRANSMILENIO"] .bus-btn:hover {
+  background: var(--coral-2) !important;
+  box-shadow: 0 12px 24px rgba(200, 16, 46, 0.3) !important;
+}
+
+body[data-sistema="TRANSMILENIO"] .menu-page .ride-submit {
+  background: var(--coral);
+  box-shadow: 0 7px 17px rgba(200, 16, 46, 0.22);
+}
+
+body[data-sistema="TRANSMILENIO"] .menu-page .ride-submit:hover {
+  background: var(--coral-2);
+  box-shadow: 0 11px 22px rgba(200, 16, 46, 0.3);
+}
+
+body[data-sistema="TRANSMILENIO"] .menu-page section[data-sistema] form button {
+  border: 1px solid var(--mango);
+  background: var(--mango);
+  color: var(--tinta);
+  box-shadow: 0 5px 14px rgba(212, 155, 0, 0.2);
+}
+
+body[data-sistema="TRANSMILENIO"] .menu-page section[data-sistema] form button:hover {
+  background: #e2ad17;
+  box-shadow: 0 8px 18px rgba(212, 155, 0, 0.28);
+}
+
+body[data-sistema="TRANSMILENIO"] .menu-page .dashboard-logout button {
+  border-color: var(--linea);
+  background: var(--mango-soft);
+  color: var(--tinta);
+}
+
+body[data-sistema="TRANSMILENIO"] .menu-page .dashboard-logout button:hover {
+  border-color: var(--mango);
+  background: #ffedaa;
+  color: var(--tinta-2);
+}
+
+body[data-sistema="TRANSMILENIO"] .admin-switch-btn {
+  background: var(--coral);
+  box-shadow: 0 6px 18px rgba(200, 16, 46, 0.3);
+  animation-name: respirar-transmilenio;
+}
+
+body[data-sistema="TRANSMILENIO"] .admin-switch-btn:hover {
+  background: var(--coral-2);
+  box-shadow: 0 10px 22px rgba(200, 16, 46, 0.36);
+}
+
+@keyframes respirar-transmilenio {
+  0%, 100% { box-shadow: 0 6px 18px rgba(200, 16, 46, 0.3); }
+  50% { box-shadow: 0 10px 26px rgba(200, 16, 46, 0.42); }
+}
+
+body[data-sistema="TRANSMILENIO"] .button-link {
+  border-color: var(--caribe);
+  color: var(--caribe);
+  box-shadow: 0 8px 20px rgba(200, 16, 46, 0.12);
+}
+
+body[data-sistema="TRANSMILENIO"] .button-link:hover {
+  background: var(--caribe-soft);
+}
+
+body[data-sistema="TRANSMILENIO"] .error-message {
+  background: var(--caribe-soft);
+  color: var(--tinta);
+}
+
+body[data-sistema="TRANSMILENIO"] .error {
+  background: var(--coral);
+}
+
+body[data-sistema="TRANSMILENIO"] .recarga-form label {
+  color: var(--tinta);
+}
+
+body[data-sistema="TRANSMILENIO"] .recarga-form input,
+body[data-sistema="TRANSMILENIO"] .recarga-form select,
+body[data-sistema="TRANSMILENIO"] select,
+body[data-sistema="TRANSMILENIO"] input:not([type="radio"]):not([type="checkbox"]) {
+  border-color: var(--linea);
+}
+
+body[data-sistema="TRANSMILENIO"] .payment-option,
+body[data-sistema="TRANSMILENIO"] .recharge-mode-option {
+  border-color: var(--linea);
+  background: linear-gradient(100deg, #fff8e0, #fce8eb);
+  color: var(--tinta);
+}
+
+body[data-sistema="TRANSMILENIO"] .payment-option input,
+body[data-sistema="TRANSMILENIO"] .recharge-mode-option input {
+  accent-color: var(--coral);
+}
+
+body[data-sistema="TRANSMILENIO"] .quick-recharge-option {
+  border-color: var(--mango);
+  color: var(--tinta);
+  background: var(--mango-soft);
+}
+
+body[data-sistema="TRANSMILENIO"] .quick-recharge-option[aria-pressed="true"],
+body[data-sistema="TRANSMILENIO"] .quick-recharge-option:hover {
+  background: var(--mango);
+  color: white;
+}
+
+body[data-sistema="TRANSMILENIO"] .add-section {
+  border-color: var(--linea);
+}
+
+body[data-sistema="TRANSMILENIO"] .tarjeta-slim {
+  border-color: var(--linea);
+}
+
+body[data-sistema="TRANSMILENIO"] .saldo-badge {
+  background: var(--mango-soft);
+  color: var(--tinta);
+}
+
+body[data-sistema="TRANSMILENIO"] .dashboard-summary {
+  border-color: rgba(200, 16, 46, 0.2);
+  background: linear-gradient(105deg, white 38%, #fff5d6);
+}
+
+body[data-sistema="TRANSMILENIO"] .summary-orbit {
+  border-color: rgba(212, 155, 0, 0.2);
+}
+
+body[data-sistema="TRANSMILENIO"] .action-recharge,
+body[data-sistema="TRANSMILENIO"] .action-history {
+  --action-color: var(--coral);
+  --action-tint: var(--caribe-soft);
+}
+
+body[data-sistema="TRANSMILENIO"] .action-cards,
+body[data-sistema="TRANSMILENIO"] .action-routes,
+body[data-sistema="TRANSMILENIO"] .action-profile,
+body[data-sistema="TRANSMILENIO"] .action-alerts {
+  --action-color: var(--mango);
+  --action-tint: var(--mango-soft);
+}
+
+body[data-sistema="TRANSMILENIO"] .dashboard-action:not(.is-disabled) {
+  --action-color: var(--coral);
+  --action-tint: var(--caribe-soft);
+}
+
+body[data-sistema="TRANSMILENIO"] .dashboard-action.is-disabled,
+body[data-sistema="TRANSMILENIO"] .dashboard-action.is-disabled:hover {
+  --action-color: #737b83;
+  --action-tint: #e9ecef;
+  border-color: #d1d5d9;
+  background: #f1f3f5;
+  color: #68717a;
+  opacity: 1;
+  box-shadow: none;
+}
+
+body[data-sistema="TRANSMILENIO"] .dashboard-action.is-disabled .action-copy strong,
+body[data-sistema="TRANSMILENIO"] .dashboard-action.is-disabled .action-copy small,
+body[data-sistema="TRANSMILENIO"] .dashboard-action.is-disabled .action-icon,
+body[data-sistema="TRANSMILENIO"] .dashboard-action.is-disabled .action-arrow {
+  color: #737b83;
+}
+
+body[data-sistema="TRANSMILENIO"] .dashboard-ride {
+  border-color: rgba(200, 16, 46, 0.28);
+  background: linear-gradient(115deg, #fff0e8, #fff5d6 68%);
+  box-shadow: 0 8px 24px rgba(143, 23, 43, 0.08);
+}
+
+body[data-sistema="TRANSMILENIO"] .ride-icon {
+  color: var(--tinta);
+  background: var(--mango-soft);
+  box-shadow: inset 0 0 0 1px rgba(212, 155, 0, 0.2);
+}
+
+body[data-sistema="TRANSMILENIO"] .ride-intro .dashboard-eyebrow {
+  color: var(--coral-2);
+}
 
 .dashboard-ride {
   position: relative;

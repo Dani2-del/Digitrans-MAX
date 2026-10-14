@@ -6,25 +6,26 @@
   <title>Recargar - Digitrans</title>
     <th:block th:replace="~{fragments/loading-indicator :: styles}"></th:block>
 </head>
-<body>
+<body th:attr="data-sistema=${sistemaActual}">
   <div class="page">
     <div th:replace="fragments/header :: header"></div>
 
     <main class="center-card">
-      <div class="card" style="background: white; color: #4a5568; max-width: 760px; margin: 0 auto; padding: 36px 32px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid rgba(240,148,84,0.2); position: relative; text-align: center;">
+      <div class="card" style="background: white; color: #4a5568; max-width: 760px; margin: 0 auto; padding: 36px 32px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid var(--linea); position: relative; text-align: center;">
         <button class="back-arrow"
-                th:onclick="|window.location.href='@{/menu}'|"
-                style="color: #f09454;">
+                th:onclick="|window.location.href='@{/menu}'|">
           🡨
         </button>
 
-        <h2 style="color: #f09454; margin-bottom: 16px; font-size: 1.95rem;">Recargar saldo</h2>
+        <h2 style="margin-bottom: 16px; font-size: 1.95rem;">
+          Recargar saldo · <span th:text="${sistemaActual.nombre}">Transcaribe</span>
+        </h2>
         <p style="color: #4a5568;">Usuario: <strong th:text="${usuario.correo}"></strong></p>
 
         <form th:action="@{/recargar}" method="post" class="recarga-form" id="recargaForm">
           
           <div class="form-section full-width">
-            <label style="color: #4a5568;">Tipo de recarga</label>
+            <label>Tipo de recarga</label>
             <div class="recharge-mode-options" role="radiogroup" aria-label="Tipo de recarga">
               <label class="recharge-mode-option">
                 <input type="radio" name="modoRecarga" value="RAPIDA"
@@ -40,13 +41,13 @@
           </div>
 
           <div id="recargaRapidaFields" class="form-section full-width">
-            <label style="color: #4a5568;">Recarga rápida por pasajes</label>
+            <label>Recarga rápida por pasajes</label>
             <div class="quick-recharge-options" aria-label="Cantidades rápidas de pasajes">
               <button type="button" class="quick-recharge-option" data-quantity="1">1 pasaje</button>
               <button type="button" class="quick-recharge-option" data-quantity="5">5 pasajes</button>
               <button type="button" class="quick-recharge-option" data-quantity="10">10 pasajes</button>
             </div>
-            <label for="cantidadPasajes" style="color: #4a5568;">Cantidad de pasajes</label>
+            <label for="cantidadPasajes">Cantidad de pasajes</label>
             <input id="cantidadPasajes" name="cantidadPasajes" type="number" min="1" step="1"
                    th:value="${cantidadPasajes}" required />
             <p class="recharge-total">
@@ -57,68 +58,68 @@
           </div>
 
           <div id="recargaNormalFields" class="form-section full-width" style="display:none;">
-            <label for="monto" style="color: #4a5568;">Monto a recargar (COP)</label>
+            <label for="monto">Monto a recargar (COP)</label>
             <input id="monto" name="monto" type="number" min="1" step="1"
                    th:value="${monto}" placeholder="Ej: 50000" disabled required />
           </div>
 
           <div class="form-section full-width">
-            <label style="color: #4a5568;">Método de pago</label>
+            <label>Método de pago</label>
             <div class="radio-options" style="background: transparent;">
-              <label style="background: rgba(240,148,84,0.08); border: 1px solid rgba(240,148,84,0.3); color: #4a5568;">
+              <label class="payment-option">
                 <input type="radio" name="metodoPago" value="pse" checked onchange="togglePaymentFields()"/> PSE
               </label>
-              <label style="background: rgba(240,148,84,0.08); border: 1px solid rgba(240,148,84,0.3); color: #4a5568;">
+              <label class="payment-option">
                 <input type="radio" name="metodoPago" value="tarjetaCredito" onchange="togglePaymentFields()"/> Tarjeta de crédito / débito
               </label>
             </div>
           </div>
 
           <div id="pseFields" class="form-section full-width">
-            <label for="correoPSE" style="color: #4a5568;">Correo PSE</label>
+            <label for="correoPSE">Correo PSE</label>
             <input id="correoPSE" name="correoPSE" type="email" placeholder="correo@ejemplo.com" />
 
-            <label for="contrasenaPSE" style="color: #4a5568;">Contraseña PSE</label>
+            <label for="contrasenaPSE">Contraseña PSE</label>
             <input id="contrasenaPSE" name="contrasenaPSE" type="password" placeholder="Contraseña" />
           </div>
 
           <div id="tarjetaCreditoFields" class="form-section full-width" style="display: none;">
-            <label for="numeroTarjetaPago" style="color: #4a5568;">Número de tarjeta (pago)</label>
+            <label for="numeroTarjetaPago">Número de tarjeta (pago)</label>
             <input id="numeroTarjetaPago" name="numeroTarjetaPago" type="text" inputmode="numeric" maxlength="19" placeholder="1234 5678 9012 3456" disabled />
 
             <div class="grid-2">
               <div>
-                <label for="fechaVencimientoPago" style="color: #4a5568;">Fecha de vencimiento (MM/AA)</label>
+                <label for="fechaVencimientoPago">Fecha de vencimiento (MM/AA)</label>
                 <input id="fechaVencimientoPago" name="fechaVencimientoPago" type="text" maxlength="5" placeholder="MM/AA" disabled />
               </div>
               <div>
-                <label for="cvvPago" style="color: #4a5568;">CVV</label>
+                <label for="cvvPago">CVV</label>
                 <input id="cvvPago" name="cvvPago" type="password" inputmode="numeric" maxlength="4" placeholder="123" disabled />
               </div>
             </div>
           </div>
 
           <div class="form-section full-width">
-            <label for="numeroTarjeta" style="color: #4a5568;">Tarjeta Digitrans destino</label>
+            <label for="numeroTarjeta">Tarjeta Digitrans destino</label>
             <select id="numeroTarjeta" name="numeroTarjeta" required 
-                    style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(240,148,84,0.3); background-color: white; font-size: 1rem; color: #4a5568;">
+                    style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--linea); background-color: white; font-size: 1rem; color: var(--tinta);">
               <option value="" disabled selected>Selecciona una de tus tarjetas</option>
-              <option th:each="t : ${usuario.tarjetas}" 
+              <option th:each="t : ${tarjetas}"
                       th:value="${t.numeroTarjeta}" 
                       th:text="${'Tarjeta: ' + t.numeroTarjeta + ' (Saldo: $' + t.saldo + ')'}">
               </option>
             </select>
-            <small style="color: #a0aec0; font-size: 0.88rem;">El saldo se aplicará a la tarjeta que selecciones.</small>
+            <small style="color: var(--piedra-soft); font-size: 0.88rem;">El saldo se aplicará a la tarjeta que selecciones.</small>
           </div>
 
           <div class="form-section full-width button-section">
-            <button type="submit" style="width: 100%; cursor: pointer; margin-top: 8px; padding: 14px 18px; border-radius: 14px; background: #f09454; color: white; border: none; font-size: 1rem; font-weight: 700; box-shadow: 0 4px 15px rgba(240,148,84,0.3); transition: all 0.2s ease;">
+            <button type="submit" class="primary" style="width: 100%; cursor: pointer; margin-top: 8px; padding: 14px 18px; border-radius: 14px; font-size: 1rem;">
               Confirmar Recarga
             </button>
           </div>
         </form>
 
-        <p class="error" th:if="${error}" th:text="${error}" style="color: #dc3545; background: #ffebee; padding: 10px; border-radius: 5px; margin-top: 15px;"></p>
+        <p class="error" th:if="${error}" th:text="${error}"></p>
       </div>
     </main>
 

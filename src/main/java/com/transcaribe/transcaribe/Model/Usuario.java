@@ -127,8 +127,12 @@ public class Usuario {
     public void setTarjetas(List<Tarjeta> tarjetas) { this.tarjetas = tarjetas; }
 
     public void agregarTarjeta(String numero, BigDecimal saldoInicial) {
+        agregarTarjeta(numero, saldoInicial, SistemaTransporte.TRANSCARIBE);
+    }
+
+    public void agregarTarjeta(String numero, BigDecimal saldoInicial, SistemaTransporte sistemaTransporte) {
         if (this.tarjetas == null) this.tarjetas = new ArrayList<>();
-        this.tarjetas.add(new Tarjeta(numero, saldoInicial));
+        this.tarjetas.add(new Tarjeta(numero, saldoInicial, sistemaTransporte));
     }
 
     public void eliminarTarjeta(String numero) {

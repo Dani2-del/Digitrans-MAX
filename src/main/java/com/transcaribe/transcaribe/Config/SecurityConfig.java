@@ -1,5 +1,6 @@
 package com.transcaribe.transcaribe.Config;
 
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 import com.transcaribe.transcaribe.Security.JwtAuthenticationFilter;
 import com.transcaribe.transcaribe.Security.OAuth2AuthenticationSuccessHandler;
 import com.transcaribe.transcaribe.service.CustomUserDetailsService;
@@ -73,6 +74,9 @@ public class SecurityConfig {
                 .usernameParameter("correo")
                 .passwordParameter("password")
                 .successHandler((request, response, authentication) -> {
+                    if (request.getSession(false) != null) {
+                        request.getSession(false).removeAttribute(SistemaTransporte.SESSION_ATTRIBUTE);
+                    }
                     var roles = authentication.getAuthorities();
                     boolean isAdmin = roles.stream().anyMatch(r ->
                         r.getAuthority().equals("ROLE_ADMIN"));

@@ -9,6 +9,7 @@ public class Tarjeta {
     private LocalDateTime fechaCreacion;
     private BigDecimal saldo;
     private BigDecimal limiteSaldo;
+    private SistemaTransporte sistemaTransporte = SistemaTransporte.TRANSCARIBE;
 
     public Tarjeta() {
     }
@@ -23,6 +24,13 @@ public class Tarjeta {
         this.numeroTarjeta = numeroTarjeta;
         this.saldo = saldo;
         this.limiteSaldo = limiteSaldo;
+        this.fechaCreacion = LocalDateTime.now();
+    }
+
+    public Tarjeta(String numeroTarjeta, BigDecimal saldo, SistemaTransporte sistemaTransporte) {
+        this.numeroTarjeta = numeroTarjeta;
+        this.saldo = saldo;
+        this.sistemaTransporte = sistemaTransporte;
         this.fechaCreacion = LocalDateTime.now();
     }
 
@@ -56,5 +64,13 @@ public class Tarjeta {
 
     public void setLimiteSaldo(BigDecimal limiteSaldo) {
         this.limiteSaldo = limiteSaldo;
+    }
+
+    public SistemaTransporte getSistemaTransporte() {
+        return sistemaTransporte == null ? SistemaTransporte.TRANSCARIBE : sistemaTransporte;
+    }
+
+    public void setSistemaTransporte(SistemaTransporte sistemaTransporte) {
+        this.sistemaTransporte = sistemaTransporte;
     }
 }

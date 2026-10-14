@@ -33,6 +33,9 @@ public class Transaccion {
     @Field("tarjeta_transcaribe")
     private String tarjetaTranscaribe;
 
+    @Field("sistema_transporte")
+    private SistemaTransporte sistemaTransporte = SistemaTransporte.TRANSCARIBE;
+
     @Field("cantidad_pasajes")
     private Integer cantidadPasajes;
 
@@ -69,6 +72,13 @@ public class Transaccion {
 
     public String getTarjetaTranscaribe() { return tarjetaTranscaribe; }
     public void setTarjetaTranscaribe(String tarjetaTranscaribe) { this.tarjetaTranscaribe = tarjetaTranscaribe; }
+
+    public SistemaTransporte getSistemaTransporte() {
+        return sistemaTransporte == null ? SistemaTransporte.TRANSCARIBE : sistemaTransporte;
+    }
+    public void setSistemaTransporte(SistemaTransporte sistemaTransporte) {
+        this.sistemaTransporte = sistemaTransporte;
+    }
 
     public Integer getCantidadPasajes() { return cantidadPasajes; }
     public void setCantidadPasajes(Integer cantidadPasajes) { this.cantidadPasajes = cantidadPasajes; }

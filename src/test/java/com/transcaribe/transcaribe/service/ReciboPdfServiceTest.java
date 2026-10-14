@@ -42,7 +42,7 @@ class ReciboPdfServiceTest {
             assertFalse(contenido.contains("1234567890"));
             assertTrue(contenido.contains("Fecha y hora registrada: 25/09/2026 14:30:00"));
             assertTrue(contenido.contains("Cuenta PSE: pasajero.pse@example.com"));
-            assertTrue(contenido.contains("Tarjeta Transcaribe: ******7890"));
+            assertTrue(contenido.contains("Tarjeta de transporte: ******7890"));
             assertTrue(contenido.contains("Cantidad de pasajes: 1"));
             assertTrue(contenido.contains("3.900,00"));
         }

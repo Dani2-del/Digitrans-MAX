@@ -2,6 +2,7 @@ package com.transcaribe.transcaribe.Controller;
 
 import com.transcaribe.transcaribe.Model.Usuario;
 import com.transcaribe.transcaribe.Model.Tarjeta;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 import com.transcaribe.transcaribe.Repository.BusRepository;
 import com.transcaribe.transcaribe.service.BusService;
 import com.transcaribe.transcaribe.service.ServiceTranscaribe;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import jakarta.servlet.http.HttpSession;
 
 @Controller
 @RequestMapping("/api/buses")
@@ -35,16 +37,22 @@ public class BusController {
     public ResponseEntity<String> pagar(
             @PathVariable String usuarioId, 
             @PathVariable String busId,
-            @RequestParam String numeroTarjeta) {
+            @RequestParam String numeroTarjeta,
+            HttpSession session) {
         try {
-            String resultado = busService.pagarPasajeConTarjetaEspecifica(usuarioId, busId, numeroTarjeta);
+            SistemaTransporte sistema = obtenerSistemaActual(session);
+            if (sistema == null) {
+                return ResponseEntity.badRequest().body("Selecciona un sistema de transporte válido.");
+            }
+            String resultado = busService.pagarPasajeConTarjetaEspecifica(
+                    usuarioId, busId, numeroTarjeta, sistema);
             if (resultado.contains("Saldo insuficiente") || resultado.contains("no es válida")) {
                 return ResponseEntity.badRequest().body(resultado);
             }
             try {
                 Usuario usuarioDestino = service.buscarPorId(usuarioId);
                 if (usuarioDestino != null) {
-                    double costoPasaje = (double) TarifaTranscaribe.VALOR_PASAJE_COP;
+                    double costoPasaje = (double) TarifaTranscaribe.paraSistema(sistema);
                     String saldoRestante = resultado.split("\\$")[1]; 
                     emailService.enviarNotificacionGasto(
                         usuarioDestino.getCorreo(),
@@ -80,16 +88,22 @@ public class BusController {
     @PostMapping("/simular-viaje")
     public String simularViaje(@RequestParam String usuarioId, 
                                @RequestParam String numeroTarjeta, 
-                               RedirectAttributes redirectAttributes) {
+                               RedirectAttributes redirectAttributes,
+                               HttpSession session) {
         
         try {
+            SistemaTransporte sistema = obtenerSistemaActual(session);
+            if (sistema == null) {
+                return "redirect:/menu";
+            }
             var buses = busRepository.findAll();
             if (buses.isEmpty()) {
                 redirectAttributes.addFlashAttribute("error", "No hay buses configurados. Ejecuta el setup primero.");
                 return "redirect:/menu";
             }
             String busId = buses.get(0).getId(); 
-            String resultado = busService.pagarPasajeConTarjetaEspecifica(usuarioId, busId, numeroTarjeta);
+            String resultado = busService.pagarPasajeConTarjetaEspecifica(
+                    usuarioId, busId, numeroTarjeta, sistema);
 
             if (resultado.contains("Cobro exitoso")) {
                 try {
@@ -99,7 +113,7 @@ public class BusController {
                         emailService.enviarNotificacionGasto(
                             u.getCorreo(), 
                             u.getNombre(), 
-                            (double) TarifaTranscaribe.VALOR_PASAJE_COP,
+                            (double) TarifaTranscaribe.paraSistema(sistema),
                             saldoRestante
                         );
 
@@ -124,5 +138,12 @@ public class BusController {
         }
 
         return "redirect:/menu";
+    }
+
+    private SistemaTransporte obtenerSistemaActual(HttpSession session) {
+        Object sistema = session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE);
+        return sistema instanceof SistemaTransporte seleccionado && seleccionado.estaDisponible()
+                ? seleccionado
+                : null;
     }
 }

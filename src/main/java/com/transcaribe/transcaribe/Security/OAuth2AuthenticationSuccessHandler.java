@@ -14,6 +14,7 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import com.transcaribe.transcaribe.Model.Usuario;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 import com.transcaribe.transcaribe.Repository.UsuarioRepository;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -62,6 +63,9 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                 .build();
         String token = jwtService.generateToken(userDetails);
         jwtCookieService.addJwtCookie(response, token);
+        if (request.getSession(false) != null) {
+            request.getSession(false).removeAttribute(SistemaTransporte.SESSION_ATTRIBUTE);
+        }
         var authToken = new UsernamePasswordAuthenticationToken(
                 userDetails, null, userDetails.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authToken);

@@ -6,19 +6,21 @@
   <title>Mis Tarjetas - Digitrans</title>
     <th:block th:replace="~{fragments/loading-indicator :: styles}"></th:block>
 </head>
-<body>
+<body th:attr="data-sistema=${sistemaActual}">
   <div class="page">
     <div th:replace="fragments/header :: header"></div>
 
     <main class="center-card">
       <div class="card" style="max-width: 600px;"> <h2 style="margin-bottom: 20px;">Mis Tarjetas</h2>
+        <p>Sistema activo: <strong th:text="${sistemaActual.nombre}">Transcaribe</strong></p>
 
-        <div th:if="${not #lists.isEmpty(usuario.tarjetas)}">
-            <div th:each="tarjeta : ${usuario.tarjetas}" class="tarjeta-slim">
+        <div th:if="${not #lists.isEmpty(tarjetasSistemaActual)}">
+            <div th:each="tarjeta : ${tarjetasSistemaActual}" class="tarjeta-slim">
                 
                 <div class="info-principal">
                     <p class="numero-label">Número de tarjeta</p>
                     <span class="numero-valor" th:text="${tarjeta.numeroTarjeta}"></span>
+                    <p class="numero-label" th:text="${tarjeta.sistemaTransporte.nombre}"></p>
                 </div>
 
                 <div class="saldo-badge">
@@ -38,12 +40,13 @@
             </div>
         </div>
 
-        <div th:if="${#lists.isEmpty(usuario.tarjetas)}" class="error-message">
-          <p>No tienes tarjetas asociadas.</p>
+        <div th:if="${#lists.isEmpty(tarjetasSistemaActual)}" class="error-message">
+          <p>No tienes tarjetas asociadas a <strong th:text="${sistemaActual.nombre}">este sistema</strong>.</p>
         </div>
 
         <div class="add-section">
             <h4 style="margin-bottom: 10px;">Vincular nueva tarjeta</h4>
+            <p>La nueva tarjeta se vinculará a <strong th:text="${sistemaActual.nombre}">este sistema</strong>.</p>
             <form th:action="@{/tarjetas/agregar}" method="post" style="display: flex; gap: 10px;">
                 <input type="text" name="nuevoNumero" class="input-corto" 
                        placeholder="10 dígitos" pattern="\d{10}" maxlength="10" required />

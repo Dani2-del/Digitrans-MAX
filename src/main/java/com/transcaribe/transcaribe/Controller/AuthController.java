@@ -1,6 +1,8 @@
 package com.transcaribe.transcaribe.Controller;
 
 import com.transcaribe.transcaribe.service.ServiceTranscaribe;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.mail.MailException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
@@ -30,7 +32,16 @@ public class AuthController {
     }
 
     @GetMapping("/mapa-rutas")
-    public String mapaRutas(Authentication authentication, Model model) {
+    public String mapaRutas(Authentication authentication, Model model, HttpSession session) {
+        boolean esUsuario = authentication != null
+                && authentication.isAuthenticated()
+                && authentication.getAuthorities().stream()
+                        .anyMatch(authority -> "ROLE_USER".equals(authority.getAuthority()));
+        if (esUsuario && session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE)
+                == SistemaTransporte.TRANSMILENIO) {
+            return "redirect:/menu";
+        }
+
         String menuUrl = "/";
         String menuLabel = "Volver al inicio";
         boolean esAdmin = false;

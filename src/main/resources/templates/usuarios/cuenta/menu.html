@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0F3948" />
+  <meta name="theme-color"
+        th:content="${esTransmilenio ? '#C8102E' : '#0F3948'}" />
   <title>Mi espacio - Digitrans</title>
-  <link rel="stylesheet" th:href="@{/css/usuario.css}" />
+  <link rel="stylesheet" th:href="@{/css/usuario.css(v=20261014-6)}" />
   <link rel="stylesheet" th:href="@{/css/avisos.css}" />
     <th:block th:replace="~{fragments/loading-indicator :: styles}"></th:block>
 </head>
-<body class="menu-page">
+<body class="menu-page" th:attr="data-sistema=${sistemaActual}">
   <div class="page">
     <div th:replace="~{fragments/header :: header}"></div>
 
@@ -18,7 +19,7 @@
         <div class="welcome-copy">
           <span class="dashboard-eyebrow">TU ESPACIO Digitrans</span>
           <h1>Hola, <span th:text="${usuario.nombre != null && !usuario.nombre.isBlank() ? usuario.nombre : 'viajero'}">viajero</span></h1>
-          <p>Todo lo que necesitas para moverte por Cartagena, en un solo lugar.</p>
+          <p>Estás usando <strong th:text="${sistemaActual.nombre}">Transcaribe</strong>. Aquí tienes tus tarjetas y movimientos de ese sistema.</p>
         </div>
         <div class="welcome-mark" aria-hidden="true">
           <svg viewBox="0 0 120 120" fill="none">
@@ -29,6 +30,20 @@
             <path d="M60 12v12M108 60H96M60 108V96M12 60h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </div>
+      </section>
+
+      <section th:attr="data-sistema=${sistemaActual}" aria-label="Sistema de transporte activo">
+        <p>Sistema seleccionado: <strong th:text="${sistemaActual.nombre}">Transcaribe</strong></p>
+        <form th:action="@{/menu/sistema}" method="post">
+          <label for="sistema">Cambiar sistema:</label>
+          <select id="sistema" name="sistema">
+            <option th:each="sistema : ${sistemasTransporte}"
+                    th:value="${sistema}"
+                    th:text="${sistema.nombre}"
+                    th:selected="${sistema == sistemaActual}"></option>
+          </select>
+          <button type="submit">Cambiar sistema</button>
+        </form>
       </section>
 
       <section class="dashboard-summary" aria-label="Resumen de cuenta">
@@ -42,7 +57,7 @@
           <span>Saldo total en tus tarjetas</span>
         </div>
         <strong class="summary-amount"
-                th:text="${'$' + #numbers.formatDecimal(usuario.saldoTotal, 0, 'COMMA', 0, 'POINT')}">$0</strong>
+                th:text="${'$' + #numbers.formatDecimal(saldoSistemaActual, 0, 'COMMA', 0, 'POINT')}">$0</strong>
         <a class="summary-link" th:href="@{/tarjetas}">Ver mis tarjetas
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
             <path d="M4 10h11m-4-4 4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -101,20 +116,29 @@
             </svg>
           </a>
 
-          <a class="dashboard-action action-routes" th:href="@{/rutas}">
+          <a class="dashboard-action action-routes"
+             th:href="${esTransmilenio ? null : '/rutas'}"
+             th:classappend="${esTransmilenio ? 'is-disabled' : ''}"
+             th:attr="aria-disabled=${esTransmilenio}, tabindex=${esTransmilenio ? -1 : 0}">
             <span class="action-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none">
                 <path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
                 <circle cx="12" cy="9" r="2.5" stroke="currentColor" stroke-width="1.8"/>
               </svg>
             </span>
-            <span class="action-copy"><strong>Rutas favoritas</strong><small>Elige rutas y horarios de aviso</small></span>
-            <svg class="action-arrow" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <span class="action-copy">
+              <strong>Rutas favoritas</strong>
+              <small th:text="${esTransmilenio ? 'No disponible para TransMilenio por ahora' : 'Elige rutas y horarios de aviso'}">Elige rutas y horarios de aviso</small>
+            </span>
+            <svg th:unless="${esTransmilenio}" class="action-arrow" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path d="M4 10h11m-4-4 4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </a>
 
-          <a class="dashboard-action action-routes" th:href="@{/mapa-rutas}">
+          <a class="dashboard-action action-routes"
+             th:href="${esTransmilenio ? null : '/mapa-rutas'}"
+             th:classappend="${esTransmilenio ? 'is-disabled' : ''}"
+             th:attr="aria-disabled=${esTransmilenio}, tabindex=${esTransmilenio ? -1 : 0}">
             <span class="action-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none">
                 <path d="m3 6.5 5.5-2.5 7 2.5L21 4v13.5L15.5 20l-7-2.5L3 20V6.5Z"
@@ -124,8 +148,11 @@
                 <circle cx="12" cy="10" r="1" fill="currentColor"/>
               </svg>
             </span>
-            <span class="action-copy"><strong>Mapa interactivo (BETA)</strong><small>Explora rutas y paradas en el mapa</small></span>
-            <svg class="action-arrow" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <span class="action-copy">
+              <strong>Mapa interactivo (BETA)</strong>
+              <small th:text="${esTransmilenio ? 'No disponible para TransMilenio por ahora' : 'Explora rutas y paradas en el mapa'}">Explora rutas y paradas en el mapa</small>
+            </span>
+            <svg th:unless="${esTransmilenio}" class="action-arrow" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path d="M4 10h11m-4-4 4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </a>
@@ -183,7 +210,7 @@
           <label for="rideCard">Tarjeta Digitrans</label>
           <select id="rideCard" name="numeroTarjeta" class="select-bus" required>
             <option value="" disabled selected>Selecciona una tarjeta</option>
-            <option th:each="t : ${usuario.tarjetas}"
+            <option th:each="t : ${tarjetasSistemaActual}"
                     th:value="${t.numeroTarjeta}"
                     th:text="${t.numeroTarjeta + ' · Saldo $' + #numbers.formatDecimal(t.saldo, 0, 'COMMA', 0, 'POINT')}">
             </option>
