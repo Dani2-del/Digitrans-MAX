@@ -59,8 +59,9 @@ public class SecurityConfig {
                     "/js/**"
                 ).permitAll()
                 .requestMatchers("/choose-view").authenticated()
+                .requestMatchers("/admin/seleccionar-entidad", "/admin/contexto").hasRole("ADMIN")
                 .requestMatchers("/chat/**").hasAnyRole("ADMIN", "CONDUCTOR")
-                .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/admin/**").hasAnyRole("ADMIN", "MODERATOR")
                 .requestMatchers("/conductor/**").hasRole("CONDUCTOR")
                 .anyRequest().authenticated()
             )
@@ -80,10 +81,14 @@ public class SecurityConfig {
                     var roles = authentication.getAuthorities();
                     boolean isAdmin = roles.stream().anyMatch(r ->
                         r.getAuthority().equals("ROLE_ADMIN"));
+                    boolean isModerator = roles.stream().anyMatch(r ->
+                        r.getAuthority().equals("ROLE_MODERATOR"));
                     boolean isConductor = roles.stream().anyMatch(r ->
                         r.getAuthority().equals("ROLE_CONDUCTOR"));
 
-                    if (isAdmin || isConductor) {
+                    if (isModerator) {
+                        response.sendRedirect("/menu");
+                    } else if (isAdmin || isConductor) {
                         response.sendRedirect("/choose-view");
                     } else {
                         response.sendRedirect("/menu");

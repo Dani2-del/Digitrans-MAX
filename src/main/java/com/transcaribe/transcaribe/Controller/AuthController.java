@@ -62,7 +62,8 @@ public class AuthController {
     }
 
     @GetMapping("/registro")
-    public String registro() {
+    public String registro(Model model) {
+        model.addAttribute("sistemasTransporte", SistemaTransporte.disponibles());
         return "usuarios/auth/registro";
     }
 
@@ -71,9 +72,10 @@ public class AuthController {
                             @RequestParam String correo,
                             @RequestParam("password") String contrasena,
                             @RequestParam String numeroTarjeta,
+                            @RequestParam SistemaTransporte sitm,
                             Model model) {
         try {
-            boolean ok = service.registrar(nombre, correo, contrasena, numeroTarjeta);
+            boolean ok = service.registrar(nombre, correo, contrasena, numeroTarjeta, sitm);
             if (ok) {
                 return "redirect:/verificar-otp?correo=" + correo;
             }
@@ -85,6 +87,7 @@ public class AuthController {
             model.addAttribute("error", "La cuenta se creó, pero no pudimos enviar el código. Intenta reenviarlo.");
             return "usuarios/auth/verificar-codigo";
         }
+        model.addAttribute("sistemasTransporte", SistemaTransporte.disponibles());
         return "usuarios/auth/registro";
     }
 

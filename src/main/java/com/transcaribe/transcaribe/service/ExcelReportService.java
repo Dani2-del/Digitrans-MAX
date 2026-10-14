@@ -3,6 +3,7 @@ package com.transcaribe.transcaribe.service;
 import com.transcaribe.transcaribe.Model.AvisoAdministrativo;
 import com.transcaribe.transcaribe.Model.HorarioConductor;
 import com.transcaribe.transcaribe.Model.Transaccion;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 import com.transcaribe.transcaribe.Model.Usuario;
 import com.transcaribe.transcaribe.Repository.AvisoAdministrativoRepository;
 import com.transcaribe.transcaribe.Repository.HorarioConductorRepository;
@@ -44,6 +45,14 @@ public class ExcelReportService {
                                boolean incluirUsuarios, boolean incluirTransacciones,
                                boolean incluirRutas, boolean incluirAvisos,
                                OutputStream out) throws IOException {
+        generarReporte(tipo, anio, mes, dia, incluirUsuarios, incluirTransacciones,
+                incluirRutas, incluirAvisos, null, out);
+    }
+
+    public void generarReporte(String tipo, Integer anio, Integer mes, Integer dia,
+                               boolean incluirUsuarios, boolean incluirTransacciones,
+                               boolean incluirRutas, boolean incluirAvisos,
+                               SistemaTransporte sistemaTransporte, OutputStream out) throws IOException {
         SXSSFWorkbook workbook = new SXSSFWorkbook(100);
         workbook.setCompressTempFiles(true);
         try (workbook) {
@@ -55,7 +64,7 @@ public class ExcelReportService {
                 escribirUsuarios(workbook, headerStyle);
             }
             if (incluirTransacciones) {
-                escribirTransacciones(workbook, headerStyle, tipo, anio, mes, dia, rango);
+                escribirTransacciones(workbook, headerStyle, tipo, anio, mes, dia, rango, sistemaTransporte);
             }
             if (incluirRutas) {
                 escribirRutas(workbook, headerStyle, tipo, anio, mes, dia, rango, nombresUsuarios);
@@ -102,13 +111,11 @@ public class ExcelReportService {
 
     private void escribirTransacciones(Workbook workbook, CellStyle headerStyle,
                                        String tipo, Integer anio, Integer mes, Integer dia,
-                                       DateRange rango) {
+                                       DateRange rango, SistemaTransporte sistemaTransporte) {
         Sheet sheet = workbook.createSheet(buildNombreHoja(tipo, anio, mes, dia));
         String[] columns = {"Fecha y Hora", "ID Transacción", "Usuario (Correo)", "Nombre", "Tipo", "Monto"};
         crearEncabezado(sheet, headerStyle, columns);
-        try (Stream<Transaccion> transacciones = rango == null
-                ? transaccionRepository.streamAll()
-                : transaccionRepository.streamByFechaEnRango(rango.inicio(), rango.fin())) {
+        try (Stream<Transaccion> transacciones = obtenerTransacciones(rango, sistemaTransporte)) {
             Iterator<Transaccion> iterator = transacciones.iterator();
             int rowNumber = 1;
             while (iterator.hasNext()) {
@@ -127,6 +134,23 @@ public class ExcelReportService {
             }
         }
         setColumnWidths(sheet, 22, 26, 36, 28, 18, 18);
+    }
+
+    private Stream<Transaccion> obtenerTransacciones(DateRange rango, SistemaTransporte sistemaTransporte) {
+        if (sistemaTransporte == null) {
+            return rango == null
+                    ? transaccionRepository.streamAll()
+                    : transaccionRepository.streamByFechaEnRango(rango.inicio(), rango.fin());
+        }
+        if (SistemaTransporte.TRANSCARIBE.equals(sistemaTransporte)) {
+            return rango == null
+                    ? transaccionRepository.streamTranscaribe()
+                    : transaccionRepository.streamTranscaribeByFechaEnRango(rango.inicio(), rango.fin());
+        }
+        return rango == null
+                ? transaccionRepository.streamBySistemaTransporte(sistemaTransporte)
+                : transaccionRepository.streamBySistemaTransporteAndFechaEnRango(
+                        rango.inicio(), rango.fin(), sistemaTransporte);
     }
 
     private void escribirRutas(Workbook workbook, CellStyle headerStyle,

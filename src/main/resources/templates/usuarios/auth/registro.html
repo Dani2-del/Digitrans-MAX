@@ -47,6 +47,14 @@
                    title="El número de tarjeta debe tener exactamente 10 dígitos numéricos"
                    required />
 
+            <label for="sitm">Sistema Integrado de Transporte (SITM)</label>
+            <select id="sitm" name="sitm" required>
+              <option value="" disabled selected>Elige tu servicio</option>
+              <option th:each="sistema : ${sistemasTransporte}"
+                      th:value="${sistema.name()}"
+                      th:text="${sistema.nombre}"></option>
+            </select>
+
             <button class="primary" type="submit" id="btnRegistrar">Crear mi cuenta</button>
           </form>
 

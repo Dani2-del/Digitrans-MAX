@@ -44,6 +44,14 @@ public class ServiceTranscaribe {
      * Registra un nuevo usuario en la plataforma generando un código OTP.
      */
     public boolean registrar(String nombre, String correo, String contrasena, String numeroTarjeta) {
+        return registrar(nombre, correo, contrasena, numeroTarjeta, SistemaTransporte.TRANSCARIBE);
+    }
+
+    public boolean registrar(String nombre, String correo, String contrasena, String numeroTarjeta,
+                             SistemaTransporte sitm) {
+        if (sitm == null || !sitm.estaDisponible() || numeroTarjeta == null) {
+            return false;
+        }
         if (repositorioUsuarios.findByCorreo(correo).isPresent()) {
             return false;
         }
@@ -55,8 +63,8 @@ public class ServiceTranscaribe {
         String codigoOtp = String.format("%06d", GENERADOR_CODIGOS.nextInt(1000000));
 
         Usuario nuevoUsuario = new Usuario(correo, passwordEncoder.encode(contrasena), nombre);
-        
-        nuevoUsuario.agregarTarjeta(numeroLimpio, BigDecimal.ZERO);
+        nuevoUsuario.setSitm(sitm);
+        nuevoUsuario.agregarTarjeta(numeroLimpio, BigDecimal.ZERO, sitm);
         nuevoUsuario.setCodigoVerificacion(codigoOtp);
         nuevoUsuario.setVerificado(false); 
 
@@ -602,5 +610,32 @@ public class ServiceTranscaribe {
             return true;
         }
         return false;
+    }
+
+    public boolean cobrarPasajePorAdmin(String idUsuario, double monto, SistemaTransporte sistemaTransporte) {
+        if (sistemaTransporte == null || !sistemaTransporte.estaDisponible()) return false;
+        Optional<Usuario> opt = repositorioUsuarios.findById(idUsuario);
+        if (opt.isEmpty()) return false;
+
+        Usuario usuario = opt.get();
+        if (!usuario.isActivo()) return false;
+        Optional<Tarjeta> tarjetaOpt = usuario.getTarjetas().stream()
+                .filter(tarjeta -> tarjeta.getSistemaTransporte() == sistemaTransporte)
+                .findFirst();
+        if (tarjetaOpt.isEmpty()) return false;
+
+        Tarjeta tarjeta = tarjetaOpt.get();
+        BigDecimal montoBD = BigDecimal.valueOf(monto);
+        if (montoBD.signum() <= 0 || tarjeta.getSaldo().compareTo(montoBD) < 0) return false;
+
+        BigDecimal nuevoSaldo = tarjeta.getSaldo().subtract(montoBD);
+        tarjeta.setSaldo(nuevoSaldo);
+        repositorioUsuarios.save(usuario);
+        servicioTransacciones.registrarTransaccion(
+                usuario, "Cobro pasaje (Admin)", monto, null, null, null, null, sistemaTransporte);
+        emailService.enviarNotificacionGasto(
+                usuario.getCorreo(), usuario.getNombre(), monto, nuevoSaldo.toString());
+        verificarYNotificarLimiteSaldo(usuario, tarjeta);
+        return true;
     }
 }

@@ -96,7 +96,6 @@ public class UsuarioController {
 
     @GetMapping("/menu")
     public String menu(
-            @RequestParam(required = false) SistemaTransporte sistema,
             Model model,
             HttpSession session) {
         Usuario usuario = obtenerUsuarioLogueado();
@@ -109,16 +108,29 @@ public class UsuarioController {
             return "redirect:/verificar-otp?correo=" + usuario.getCorreo();
         }
 
-        if (sistema != null && sistema.estaDisponible()) {
-            session.setAttribute(SistemaTransporte.SESSION_ATTRIBUTE, sistema);
+        boolean esModerador = Usuario.ROLE_MODERATOR.equals(usuario.getRole());
+        boolean esAdmin = Usuario.ROLE_ADMIN.equals(usuario.getRole());
+        Object sistemaEnSesion = session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE);
+        SistemaTransporte sistemaAdmin = sistemaEnSesion instanceof SistemaTransporte seleccionado
+                && seleccionado.estaDisponible() ? seleccionado : usuario.getSitm();
+        SistemaTransporte sistemaCuenta = esModerador
+                ? usuario.getSistemaAsignado()
+                : esAdmin ? sistemaAdmin
+                : usuario.getSitm();
+        if (sistemaCuenta == null || !sistemaCuenta.estaDisponible()) {
+            if (esModerador) {
+                return "redirect:/error/403";
+            }
+            if (esAdmin) {
+                sistemaCuenta = SistemaTransporte.TRANSCARIBE;
+            } else {
+                model.addAttribute("sistemasTransporte", SistemaTransporte.disponibles());
+                model.addAttribute("usuario", usuario);
+                return "usuarios/cuenta/seleccionar-sistema";
+            }
         }
-        Object sistemaGuardado = session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE);
-        if (!(sistemaGuardado instanceof SistemaTransporte sistemaActual)
-                || !sistemaActual.estaDisponible()) {
-            model.addAttribute("sistemasTransporte", SistemaTransporte.disponibles());
-            model.addAttribute("usuario", usuario);
-            return "usuarios/cuenta/seleccionar-sistema";
-        }
+        SistemaTransporte sistemaActual = sistemaCuenta;
+        session.setAttribute(SistemaTransporte.SESSION_ATTRIBUTE, sistemaActual);
 
         service.procesarNotificacionLogin(usuario.getCorreo());
         List<com.transcaribe.transcaribe.Model.Tarjeta> tarjetasSistema =
@@ -132,6 +144,7 @@ public class UsuarioController {
                 .filter(saldo -> saldo != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
         model.addAttribute("sistemaActual", sistemaActual);
+        model.addAttribute("esAdministradorGlobal", esAdmin);
         model.addAttribute("esTransmilenio", sistemaActual == SistemaTransporte.TRANSMILENIO);
         model.addAttribute("sistemasTransporte", SistemaTransporte.disponibles());
         model.addAttribute("alertasAdmin", avisoAdministrativoService.obtenerPendientes(usuario.getId()));
@@ -141,8 +154,22 @@ public class UsuarioController {
 
     @PostMapping("/menu/sistema")
     public String seleccionarSistema(@RequestParam SistemaTransporte sistema, HttpSession session) {
-        if (!sistema.estaDisponible()) {
+        Usuario usuario = obtenerUsuarioLogueado();
+        if (usuario == null) {
+            return "redirect:/login";
+        }
+        boolean administrador = Usuario.ROLE_ADMIN.equals(usuario.getRole());
+        boolean primeraSeleccionUsuario = Usuario.ROLE_USER.equals(usuario.getRole())
+                && (usuario.getSitm() == null || !usuario.getSitm().estaDisponible());
+        if (!administrador && !primeraSeleccionUsuario) {
+            return "redirect:/menu";
+        }
+        if (sistema == null || !sistema.estaDisponible()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sistema de transporte no disponible.");
+        }
+        if (primeraSeleccionUsuario) {
+            usuario.setSitm(sistema);
+            usuarioRepository.save(usuario);
         }
         session.setAttribute(SistemaTransporte.SESSION_ATTRIBUTE, sistema);
         return "redirect:/menu";

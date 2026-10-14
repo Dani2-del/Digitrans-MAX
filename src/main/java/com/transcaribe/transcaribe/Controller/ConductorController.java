@@ -54,10 +54,11 @@ public class ConductorController {
         }
 
         boolean esAdmin = Usuario.ROLE_ADMIN.equals(usuario.getRole());
+        boolean esModerador = Usuario.ROLE_MODERATOR.equals(usuario.getRole());
         boolean esConductor = Usuario.ROLE_CONDUCTOR.equals(usuario.getRole());
 
         // Un usuario normal no tiene nada que elegir, va directo a su menú
-        if (!esAdmin && !esConductor) {
+        if (!esAdmin && !esModerador && !esConductor) {
             return "redirect:/menu";
         }
 
@@ -66,6 +67,7 @@ public class ConductorController {
         model.addAttribute("alertasAdmin", avisoAdministrativoService.obtenerPendientes(usuario.getId()));
         model.addAttribute("alertaReturnTo", "/choose-view");
         model.addAttribute("esAdmin", esAdmin);
+        model.addAttribute("esModerador", esModerador);
         model.addAttribute("esConductor", esConductor);
         return "choose-view";
     }

@@ -1,6 +1,7 @@
 package com.transcaribe.transcaribe.Controller;
 
 import com.transcaribe.transcaribe.Model.Usuario;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 import com.transcaribe.transcaribe.Repository.UsuarioRepository;
 import com.transcaribe.transcaribe.service.AvisoAdministrativoService;
 import org.bson.Document;
@@ -13,6 +14,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
+import jakarta.servlet.http.HttpSession;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -50,22 +52,27 @@ public class AdminChartsController {
 
     @GetMapping("/api")
     @ResponseBody
-    public ResponseEntity<EstadisticasAdmin> obtenerEstadisticas() {
+    public ResponseEntity<EstadisticasAdmin> obtenerEstadisticas(HttpSession session) {
+        SistemaTransporte sistemaActual = (SistemaTransporte) session.getAttribute(
+                SistemaTransporte.SESSION_ATTRIBUTE);
         Date inicioPeriodo = Date.from(LocalDate.now(ZONA_CARTAGENA)
                 .minusMonths(11)
                 .withDayOfMonth(1)
                 .atStartOfDay(ZONA_CARTAGENA)
                 .toInstant());
 
-        List<ChartPoint> usuariosPorRol = aggregate("usuarios", List.of(
+        List<ChartPoint> usuariosPorRol = aggregateUsuarios(List.of(
                 new Document("$group", new Document("_id", "$role")
                         .append("cantidad", new Document("$sum", 1))),
                 new Document("$sort", new Document("cantidad", -1))
-        ));
+        ), sistemaActual);
 
+        Document filtroPeriodo = new Document("$and", List.of(
+                filtroSistema(sistemaActual),
+                new Document("fecha", new Document("$gte", inicioPeriodo))));
         List<Document> transaccionesMensuales = mongoTemplate.getCollection("transacciones")
                 .aggregate(List.of(
-                        new Document("$match", new Document("fecha", new Document("$gte", inicioPeriodo))),
+                        new Document("$match", filtroPeriodo),
                         new Document("$group", new Document("_id", new Document("$dateToString",
                                 new Document("format", "%Y-%m")
                                         .append("date", "$fecha")
@@ -76,7 +83,7 @@ public class AdminChartsController {
                 ), Document.class)
                 .into(new ArrayList<>());
 
-        List<ChartPoint> transaccionesPorTipo = aggregate("transacciones", List.of(
+        List<ChartPoint> transaccionesPorTipo = aggregateTransacciones(List.of(
                 new Document("$project", new Document("categoria",
                         new Document("$switch", new Document("branches", List.of(
                                 new Document("case", new Document("$regexMatch",
@@ -93,7 +100,7 @@ public class AdminChartsController {
                 new Document("$group", new Document("_id", "$categoria")
                         .append("cantidad", new Document("$sum", 1))),
                 new Document("$sort", new Document("cantidad", -1))
-        ));
+        ), sistemaActual);
 
         List<ChartPoint> horariosPorEstado = aggregate("horarios_conductor", List.of(
                 new Document("$group", new Document("_id", "$estado")
@@ -124,8 +131,8 @@ public class AdminChartsController {
         }
 
         EstadisticasAdmin stats = new EstadisticasAdmin(
-                mongoTemplate.getCollection("usuarios").countDocuments(),
-                mongoTemplate.getCollection("transacciones").countDocuments(),
+                mongoTemplate.getCollection("usuarios").countDocuments(filtroUsuariosSistema(sistemaActual)),
+                mongoTemplate.getCollection("transacciones").countDocuments(filtroSistema(sistemaActual)),
                 mongoTemplate.getCollection("horarios_conductor").countDocuments(),
                 mongoTemplate.getCollection("avisos_administrativos").countDocuments(),
                 usuariosPorRol,
@@ -138,6 +145,35 @@ public class AdminChartsController {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(stats);
+    }
+
+    private List<ChartPoint> aggregateTransacciones(List<Document> pipeline, SistemaTransporte sistemaActual) {
+        List<Document> pipelineConSistema = new ArrayList<>();
+        pipelineConSistema.add(new Document("$match", filtroSistema(sistemaActual)));
+        pipelineConSistema.addAll(pipeline);
+        return aggregate("transacciones", pipelineConSistema);
+    }
+
+    private List<ChartPoint> aggregateUsuarios(List<Document> pipeline, SistemaTransporte sistemaActual) {
+        List<Document> pipelineConSistema = new ArrayList<>();
+        pipelineConSistema.add(new Document("$match", filtroUsuariosSistema(sistemaActual)));
+        pipelineConSistema.addAll(pipeline);
+        return aggregate("usuarios", pipelineConSistema);
+    }
+
+    private Document filtroUsuariosSistema(SistemaTransporte sistemaActual) {
+        return new Document("$or", List.of(
+                new Document("sitm", sistemaActual.name()),
+                new Document("sistema_asignado", sistemaActual.name())));
+    }
+
+    private Document filtroSistema(SistemaTransporte sistemaActual) {
+        if (sistemaActual == SistemaTransporte.TRANSCARIBE) {
+            return new Document("$or", List.of(
+                    new Document("sistema_transporte", SistemaTransporte.TRANSCARIBE.name()),
+                    new Document("sistema_transporte", null)));
+        }
+        return new Document("sistema_transporte", sistemaActual.name());
     }
 
     private List<ChartPoint> aggregate(String collection, List<Document> pipeline) {

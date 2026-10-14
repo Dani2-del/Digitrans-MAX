@@ -6,7 +6,7 @@
   <meta name="theme-color"
         th:content="${esTransmilenio ? '#C8102E' : '#0F3948'}" />
   <title>Mi espacio - Digitrans</title>
-  <link rel="stylesheet" th:href="@{/css/usuario.css(v=20261014-6)}" />
+  <link rel="stylesheet" th:href="@{/css/usuario.css(v=20261014-7)}" />
   <link rel="stylesheet" th:href="@{/css/avisos.css}" />
     <th:block th:replace="~{fragments/loading-indicator :: styles}"></th:block>
 </head>
@@ -34,7 +34,7 @@
 
       <section th:attr="data-sistema=${sistemaActual}" aria-label="Sistema de transporte activo">
         <p>Sistema seleccionado: <strong th:text="${sistemaActual.nombre}">Transcaribe</strong></p>
-        <form th:action="@{/menu/sistema}" method="post">
+        <form th:if="${usuario.role == 'ROLE_ADMIN'}" th:action="@{/menu/sistema}" method="post">
           <label for="sistema">Cambiar sistema:</label>
           <select id="sistema" name="sistema">
             <option th:each="sistema : ${sistemasTransporte}"
@@ -249,6 +249,12 @@
         <circle cx="10" cy="9.5" r="2.4" stroke="currentColor" stroke-width="1.4"/>
       </svg>
       Panel administrador
+    </a>
+
+    <a th:if="${usuario.role == 'ROLE_MODERATOR'}"
+       th:href="@{/admin/dashboard}"
+       class="admin-switch-btn">
+      Panel de moderación
     </a>
 
     <a th:if="${usuario.role == 'ROLE_CONDUCTOR'}"

@@ -17,7 +17,10 @@
                 <div>
                     <p class="admin-eyebrow">Digitrans · ADMINISTRACIÓN</p>
                     <h1>Gestión de usuarios</h1>
-                    <p class="admin-home-subtitle">Usuarios registrados: <span th:text="${totalUsuarios}"></span></p>
+                    <p class="admin-home-subtitle">
+                        Servicio: <span th:text="${sistemaActual.nombre}">SITM</span>
+                        · Usuarios registrados: <span th:text="${totalUsuarios}"></span>
+                    </p>
                 </div>
 
                 <div class="admin-home-actions">
@@ -40,6 +43,7 @@
                         <option value="" th:selected="${roleSeleccionado == ''}">Todos los roles</option>
                         <option value="ROLE_USER" th:selected="${roleSeleccionado == 'ROLE_USER'}">Usuario</option>
                         <option value="ROLE_CONDUCTOR" th:selected="${roleSeleccionado == 'ROLE_CONDUCTOR'}">Conductor</option>
+                        <option value="ROLE_MODERATOR" th:selected="${roleSeleccionado == 'ROLE_MODERATOR'}">Moderador</option>
                         <option value="ROLE_ADMIN" th:selected="${roleSeleccionado == 'ROLE_ADMIN'}">Administrador</option>
                     </select>
                 </label>
@@ -112,7 +116,7 @@
                         <td>
                             <button class="card-btn" th:attr="data-id=${u.id}" onclick="openChargeModal(this)">Cobrar</button>
                             <button class="card-btn"
-                                    th:attr="data-id=${u.id}, data-nombre=${u.nombre}, data-correo=${u.correo}, data-role=${u.role}"
+                                    th:attr="data-id=${u.id}, data-nombre=${u.nombre}, data-correo=${u.correo}, data-role=${u.role}, data-sistema-asignado=${u.sistemaAsignado}"
                                     onclick="openEditModal(this)">Editar</button>
                             <button class="card-btn2" th:if="${u.role != 'ROLE_ADMIN'}"
                                     th:attr="data-id=${u.id}" onclick="deleteUser(this)">Eliminar</button>
@@ -161,6 +165,7 @@
         <button onclick="closeEditModal()" style="position:absolute; top:10px; right:15px; border:none; background:none; font-size:20px; cursor:pointer;">✖</button>
         <h3>Editar usuario</h3>
         <input type="hidden" id="editUserId" />
+        <input type="hidden" id="currentService" th:value="${sistemaActual}" />
         <label style="font-size:13px;color:#666;">Nombre completo:</label>
         <input type="text" id="editNombre" style="width:100%;padding:8px;margin-bottom:12px;border:1px solid #ccc;border-radius:6px;"><br>
         <label style="font-size:13px;color:#666;">Correo electrónico:</label>
@@ -169,8 +174,16 @@
         <select id="editRole" style="width:100%;padding:8px;margin-bottom:12px;border:1px solid #ccc;border-radius:6px;">
             <option value="ROLE_USER">Usuario (ROLE_USER)</option>
             <option value="ROLE_ADMIN">Administrador (ROLE_ADMIN)</option>
+            <option value="ROLE_MODERATOR">Moderador (ROLE_MODERATOR)</option>
             <option value="ROLE_CONDUCTOR">Conductor (ROLE_CONDUCTOR)</option>
         </select>
+        <div id="editModeratorService" style="display:none;margin-bottom:12px;">
+            <label for="editSistemaAsignado" style="font-size:13px;color:#666;">Servicio del moderador:</label>
+            <select id="editSistemaAsignado" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;">
+                <option th:each="sistema : ${sistemasTransporte}"
+                        th:value="${sistema.name()}" th:text="${sistema.nombre}"></option>
+            </select>
+        </div>
 
         <label style="font-size:13px;color:#666;">Seguridad:</label>
         <input type="password" id="editPassword" placeholder="Nueva contraseña (dejar en blanco)" style="width:100%;padding:8px;margin-bottom:15px;border:1px solid #ccc;border-radius:6px;">
@@ -199,6 +212,16 @@
     // ===== MODALES =====
     const modal = document.getElementById('chargeModal');
     const editModal = document.getElementById('editModal');
+    const editRole = document.getElementById('editRole');
+    const moderatorService = document.getElementById('editModeratorService');
+    const assignedService = document.getElementById('editSistemaAsignado');
+
+    function updateModeratorServiceVisibility() {
+        const isModerator = editRole.value === 'ROLE_MODERATOR';
+        moderatorService.style.display = isModerator ? 'block' : 'none';
+        assignedService.required = isModerator;
+    }
+    editRole.addEventListener('change', updateModeratorServiceVisibility);
 
     function openChargeModal(btn) { document.getElementById('modalUserId').value = btn.getAttribute('data-id'); modal.style.display = 'flex'; }
     function closeModal() { modal.style.display = 'none'; }
@@ -218,6 +241,9 @@
         document.getElementById('editNombre').value = btn.getAttribute('data-nombre');
         document.getElementById('editCorreo').value = btn.getAttribute('data-correo');
         document.getElementById('editRole').value = btn.getAttribute('data-role');
+        assignedService.value = btn.getAttribute('data-sistema-asignado')
+            || document.getElementById('currentService').value;
+        updateModeratorServiceVisibility();
         document.getElementById('editPassword').value = '';
         document.getElementById('editMsg').textContent = '';
         editModal.style.display = 'flex';
@@ -229,18 +255,25 @@
         const nombre = document.getElementById('editNombre').value;
         const correo = document.getElementById('editCorreo').value;
         const role = document.getElementById('editRole').value;
+        const sistemaAsignado = role === 'ROLE_MODERATOR' ? assignedService.value : '';
         const password = document.getElementById('editPassword').value;
         const token = document.querySelector('meta[name="_csrf"]')?.getAttribute('content') ?? "";
         const header = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content') ?? "";
         const headers = {'Content-Type':'application/x-www-form-urlencoded'};
         if (header && token) headers[header] = token;
-        fetch('/admin/editUser', {method:'POST', headers, body: new URLSearchParams({userId, nombre, correo, role, password})})
+        fetch('/admin/editUser', {method:'POST', headers, body: new URLSearchParams({userId, nombre, correo, role, sistemaAsignado, password})})
             .then(r => r.json()).then(res => {
             if(res.status==='ok') {
                 document.getElementById('editMsg').style.color = "green";
                 document.getElementById('editMsg').textContent = "Usuario actualizado ✅";
                 setTimeout(() => location.reload(), 1000);
+            } else {
+                document.getElementById('editMsg').style.color = "#b00020";
+                document.getElementById('editMsg').textContent = res.message || "No se pudo actualizar el usuario.";
             }
+        }).catch(() => {
+            document.getElementById('editMsg').style.color = "#b00020";
+            document.getElementById('editMsg').textContent = "Ocurrió un error al actualizar el usuario.";
         });
     }
 

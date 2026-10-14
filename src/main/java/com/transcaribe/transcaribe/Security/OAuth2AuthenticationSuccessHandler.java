@@ -71,9 +71,12 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         SecurityContextHolder.getContext().setAuthentication(authToken);
 
         boolean esAdmin = Usuario.ROLE_ADMIN.equals(usuario.getRole());
+        boolean esModerador = Usuario.ROLE_MODERATOR.equals(usuario.getRole());
         boolean esConductor = Usuario.ROLE_CONDUCTOR.equals(usuario.getRole());
 
-        if (esAdmin || esConductor) {
+        if (esModerador) {
+            response.sendRedirect("/menu");
+        } else if (esAdmin || esConductor) {
             response.sendRedirect("/choose-view");
         } else {
             response.sendRedirect("/menu");

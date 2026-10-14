@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import com.transcaribe.transcaribe.Model.Usuario;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 import com.transcaribe.transcaribe.Model.Transaccion;
 import com.transcaribe.transcaribe.Repository.BusRepository;
 import com.transcaribe.transcaribe.Repository.UsuarioRepository;
@@ -59,6 +60,31 @@ public class AdminController {
 
     private static final int TAMANO_PAGINA = 20;
 
+    @GetMapping("/seleccionar-entidad")
+    public String seleccionarEntidad(Model model,
+                                     org.springframework.security.core.Authentication authentication) {
+        Usuario administrador = usuarioRepository.findByCorreo(authentication.getName()).orElse(null);
+        if (administrador == null || !Usuario.ROLE_ADMIN.equals(administrador.getRole())) {
+            return "redirect:/error/403";
+        }
+        model.addAttribute("entidades", SistemaTransporte.disponibles());
+        model.addAttribute("nombre", administrador.getNombre());
+        return "admin/seleccionar-entidad";
+    }
+
+    @PostMapping("/contexto")
+    public String cambiarEntidadAdministrativa(@RequestParam SistemaTransporte sistema,
+                                               jakarta.servlet.http.HttpSession session,
+                                               org.springframework.security.core.Authentication authentication) {
+        Usuario administrador = usuarioRepository.findByCorreo(authentication.getName()).orElse(null);
+        if (administrador == null || !Usuario.ROLE_ADMIN.equals(administrador.getRole())
+                || sistema == null || !sistema.estaDisponible()) {
+            return "redirect:/admin/seleccionar-entidad?error=true";
+        }
+        session.setAttribute(SistemaTransporte.SESSION_ATTRIBUTE, sistema);
+        return "redirect:/admin/dashboard";
+    }
+
     @GetMapping("/mapa-rutas/editar")
     public String editarGeometriasRuta() {
         return "admin/editar-rutas-mapa";
@@ -66,8 +92,13 @@ public class AdminController {
 
     @GetMapping("/dashboard")
     public String mostrarDashboard(Model model,
-                                   org.springframework.security.core.Authentication authentication) {
-        model.addAttribute("totalUsuarios", usuarioRepository.count());
+                                   org.springframework.security.core.Authentication authentication,
+                                   jakarta.servlet.http.HttpSession session) {
+        SistemaTransporte sistemaActual = (SistemaTransporte) session.getAttribute(
+                SistemaTransporte.SESSION_ATTRIBUTE);
+        model.addAttribute("totalUsuarios", contarUsuariosSistema(sistemaActual));
+        model.addAttribute("esAdministradorGlobal", authentication.getAuthorities().stream()
+                .anyMatch(autoridad -> "ROLE_ADMIN".equals(autoridad.getAuthority())));
         usuarioRepository.findByCorreo(authentication.getName()).ifPresent(usuario ->
                 model.addAttribute("alertasAdmin", avisoAdministrativoService.obtenerPendientes(usuario.getId())));
         model.addAttribute("alertaReturnTo", "/admin/dashboard");
@@ -83,7 +114,10 @@ public class AdminController {
             @RequestParam(defaultValue = "") String fechaHasta,
             @RequestParam(defaultValue = "") String estado,
             @RequestParam(defaultValue = "") String verificacion,
-            Model model) {
+            Model model,
+            jakarta.servlet.http.HttpSession session) {
+        SistemaTransporte sistemaActual = (SistemaTransporte) session.getAttribute(
+                SistemaTransporte.SESSION_ATTRIBUTE);
         String busqueda = search == null ? "" : search.trim();
         LocalDate desde = parseFechaUsuario(fechaDesde);
         LocalDate hasta = parseFechaUsuario(fechaHasta);
@@ -102,7 +136,8 @@ public class AdminController {
             filtrosValidos = false;
         }
 
-        Set<String> rolesValidos = Set.of("", Usuario.ROLE_USER, Usuario.ROLE_CONDUCTOR, Usuario.ROLE_ADMIN);
+        Set<String> rolesValidos = Set.of("", Usuario.ROLE_USER, Usuario.ROLE_CONDUCTOR,
+                Usuario.ROLE_MODERATOR, Usuario.ROLE_ADMIN);
         if (!rolesValidos.contains(role)) {
             model.addAttribute("errorFiltro", "El rol seleccionado no es válido.");
             filtrosValidos = false;
@@ -117,6 +152,7 @@ public class AdminController {
         }
 
         Query filtro = new Query();
+        filtro.addCriteria(criterioSistemaUsuario(sistemaActual));
         if (!busqueda.isBlank()) {
             String busquedaLiteral = Pattern.quote(busqueda);
             filtro.addCriteria(new Criteria().orOperator(
@@ -151,7 +187,9 @@ public class AdminController {
         model.addAttribute("usuarios", usuarios);
         model.addAttribute("currentPage", paginaSegura);
         model.addAttribute("totalPages", totalPaginas);
-        model.addAttribute("totalUsuarios", usuarioRepository.count());
+        model.addAttribute("totalUsuarios", contarUsuariosSistema(sistemaActual));
+        model.addAttribute("sistemaActual", sistemaActual);
+        model.addAttribute("sistemasTransporte", SistemaTransporte.disponibles());
         model.addAttribute("totalFiltrado", totalFiltrado);
         model.addAttribute("search", search != null ? search : "");
         model.addAttribute("roleSeleccionado", role);
@@ -161,6 +199,22 @@ public class AdminController {
         model.addAttribute("verificacionSeleccionada", verificacion);
         model.addAttribute("buses", busRepository.findAll());
         return "admin/dashboard";
+    }
+
+    private long contarUsuariosSistema(SistemaTransporte sistemaActual) {
+        Query filtro = new Query();
+        filtro.addCriteria(criterioSistemaUsuario(sistemaActual));
+        return mongoTemplate.count(filtro, Usuario.class);
+    }
+
+    private Criteria criterioSistemaUsuario(SistemaTransporte sistemaActual) {
+        return new Criteria().orOperator(
+                new Criteria().andOperator(
+                        Criteria.where("role").is(Usuario.ROLE_MODERATOR),
+                        Criteria.where("sistemaAsignado").is(sistemaActual)),
+                new Criteria().andOperator(
+                        Criteria.where("role").ne(Usuario.ROLE_MODERATOR),
+                        Criteria.where("sitm").is(sistemaActual)));
     }
 
     private LocalDate parseFechaUsuario(String fecha) {
@@ -193,7 +247,10 @@ public class AdminController {
             @RequestParam(defaultValue = "") String tipo,
             @RequestParam(required = false) Double montoMin,
             @RequestParam(required = false) Double montoMax,
-            Model model) {
+            Model model,
+            jakarta.servlet.http.HttpSession session) {
+        SistemaTransporte sistemaActual = (SistemaTransporte) session.getAttribute(
+                SistemaTransporte.SESSION_ATTRIBUTE);
         int paginaSolicitada = Math.max(page, 0);
         Sort orden = Sort.by(Sort.Direction.DESC, "fecha");
         PageRequest pageable = PageRequest.of(paginaSolicitada, TAMANO_PAGINA, orden);
@@ -208,7 +265,8 @@ public class AdminController {
         long total = 0;
 
         if (!rangoInvalido && !tipoInvalido) {
-            Query filtro = construirFiltroTransacciones(usuarioBuscado, tipoBuscado, montoMin, montoMax);
+            Query filtro = construirFiltroTransacciones(
+                    usuarioBuscado, tipoBuscado, montoMin, montoMax, sistemaActual);
             total = mongoTemplate.count(filtro, Transaccion.class);
             int totalPaginas = (int) Math.ceil((double) total / TAMANO_PAGINA);
             if (totalPaginas > 0 && paginaSolicitada >= totalPaginas) {
@@ -223,6 +281,7 @@ public class AdminController {
         model.addAttribute("currentPage", resultado.getNumber());
         model.addAttribute("totalPages", resultado.getTotalPages());
         model.addAttribute("totalTransacciones", resultado.getTotalElements());
+        model.addAttribute("sistemaActual", sistemaActual);
         model.addAttribute("usuarioBuscado", usuario);
         model.addAttribute("tipoBuscado", tipoBuscado);
         model.addAttribute("montoMin", montoMin);
@@ -236,8 +295,16 @@ public class AdminController {
     }
 
     private Query construirFiltroTransacciones(
-            String usuario, String tipo, Double montoMin, Double montoMax) {
+            String usuario, String tipo, Double montoMin, Double montoMax,
+            SistemaTransporte sistemaActual) {
         Query filtro = new Query();
+        if (sistemaActual == SistemaTransporte.TRANSCARIBE) {
+            filtro.addCriteria(new Criteria().orOperator(
+                    Criteria.where("sistemaTransporte").is(SistemaTransporte.TRANSCARIBE),
+                    Criteria.where("sistemaTransporte").is(null)));
+        } else {
+            filtro.addCriteria(Criteria.where("sistemaTransporte").is(sistemaActual));
+        }
         if (!usuario.isBlank()) {
             List<Usuario> usuarios = usuarioRepository
                     .findByNombreContainingIgnoreCaseOrCorreoContainingIgnoreCase(usuario, usuario)
@@ -273,7 +340,8 @@ public class AdminController {
             @RequestParam(defaultValue = "true") boolean incluirUsuarios,
             @RequestParam(defaultValue = "true") boolean incluirTransacciones,
             @RequestParam(defaultValue = "false") boolean incluirRutas,
-            @RequestParam(defaultValue = "false") boolean incluirAvisos) {
+            @RequestParam(defaultValue = "false") boolean incluirAvisos,
+            jakarta.servlet.http.HttpSession session) {
 
         if (!incluirUsuarios && !incluirTransacciones && !incluirRutas && !incluirAvisos) {
             return ResponseEntity.badRequest().build();
@@ -300,9 +368,11 @@ public class AdminController {
             nombreArchivo += ".xlsx";
         }
 
+        SistemaTransporte sistemaActual = (SistemaTransporte) session.getAttribute(
+                SistemaTransporte.SESSION_ATTRIBUTE);
         StreamingResponseBody file = out -> excelService.generarReporte(
                 tipo, anio, mes, dia, incluirUsuarios, incluirTransacciones,
-                incluirRutas, incluirAvisos, out);
+                incluirRutas, incluirAvisos, sistemaActual, out);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
@@ -317,9 +387,18 @@ public class AdminController {
     @PostMapping("/charge")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> chargePassenger(
-            @RequestParam String userId, @RequestParam double amount) {
+            @RequestParam String userId, @RequestParam double amount,
+            jakarta.servlet.http.HttpSession session) {
         Map<String, Object> response = new HashMap<>();
-        boolean ok = serviceTranscaribe.cobrarPasajePorAdmin(userId, amount);
+        SistemaTransporte sistemaActual = (SistemaTransporte) session.getAttribute(
+                SistemaTransporte.SESSION_ATTRIBUTE);
+        Usuario pasajero = usuarioRepository.findById(userId).orElse(null);
+        if (pasajero == null || pasajero.getSitm() != sistemaActual) {
+            response.put("status", "error");
+            response.put("message", "El usuario no pertenece al servicio seleccionado.");
+            return ResponseEntity.status(404).body(response);
+        }
+        boolean ok = serviceTranscaribe.cobrarPasajePorAdmin(userId, amount, sistemaActual);
         if (!ok) {
             response.put("status", "error");
             response.put("message", "Saldo insuficiente o usuario no encontrado");
@@ -340,15 +419,37 @@ public class AdminController {
             @RequestParam String nombre,
             @RequestParam String correo,
             @RequestParam String role,
-            @RequestParam(required = false) String password) {
+            @RequestParam(required = false) SistemaTransporte sistemaAsignado,
+            @RequestParam(required = false) String password,
+            jakarta.servlet.http.HttpSession session) {
         Map<String, Object> response = new HashMap<>();
         try {
             Optional<Usuario> opt = usuarioRepository.findById(userId);
-            if (opt.isPresent()) {
+            SistemaTransporte sistemaActual = (SistemaTransporte) session.getAttribute(
+                    SistemaTransporte.SESSION_ATTRIBUTE);
+            Set<String> rolesPermitidos = Set.of(Usuario.ROLE_USER, Usuario.ROLE_ADMIN,
+                    Usuario.ROLE_CONDUCTOR, Usuario.ROLE_MODERATOR);
+            if (!rolesPermitidos.contains(role)) {
+                response.put("status", "error");
+                response.put("message", "El rol seleccionado no es válido.");
+                return ResponseEntity.badRequest().body(response);
+            }
+            if (Usuario.ROLE_MODERATOR.equals(role)
+                    && (sistemaAsignado == null || !sistemaAsignado.estaDisponible())) {
+                response.put("status", "error");
+                response.put("message", "Selecciona un servicio válido para el moderador.");
+                return ResponseEntity.badRequest().body(response);
+            }
+            if (opt.isPresent() && perteneceASistema(opt.get(), sistemaActual)) {
                 Usuario u = opt.get();
                 u.setNombre(nombre);
                 u.setCorreo(correo);
+                boolean eraModerador = Usuario.ROLE_MODERATOR.equals(u.getRole());
                 u.setRole(role);
+                u.setSistemaAsignado(Usuario.ROLE_MODERATOR.equals(role) ? sistemaAsignado : null);
+                if (eraModerador && !Usuario.ROLE_MODERATOR.equals(role) && u.getSitm() == null) {
+                    u.setSitm(sistemaActual);
+                }
                 if (password != null && !password.trim().isEmpty()) u.setPasswordHash(password);
 
                 usuarioRepository.save(u);
@@ -368,15 +469,31 @@ public class AdminController {
 
     @PostMapping("/deleteUser")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> deleteUser(@RequestParam String userId) {
+    public ResponseEntity<Map<String, Object>> deleteUser(
+            @RequestParam String userId, jakarta.servlet.http.HttpSession session) {
         Map<String, Object> response = new HashMap<>();
         try {
-            usuarioRepository.deleteById(userId);
+            SistemaTransporte sistemaActual = (SistemaTransporte) session.getAttribute(
+                    SistemaTransporte.SESSION_ATTRIBUTE);
+            Usuario usuario = usuarioRepository.findById(userId).orElse(null);
+            if (!perteneceASistema(usuario, sistemaActual)) {
+                response.put("status", "error");
+                response.put("message", "El usuario no pertenece al servicio seleccionado.");
+                return ResponseEntity.status(404).body(response);
+            }
+            usuarioRepository.delete(usuario);
             response.put("status", "ok");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("status", "error");
             return ResponseEntity.status(500).body(response);
         }
+    }
+
+    private boolean perteneceASistema(Usuario usuario, SistemaTransporte sistemaActual) {
+        return usuario != null && sistemaActual != null
+                && (Usuario.ROLE_MODERATOR.equals(usuario.getRole())
+                    ? usuario.getSistemaAsignado() == sistemaActual
+                    : usuario.getSitm() == sistemaActual);
     }
 }

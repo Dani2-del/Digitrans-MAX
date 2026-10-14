@@ -1485,15 +1485,15 @@ body[data-sistema="TRANSMILENIO"] .sub-links a {
   color: white;
 }
 
-body[data-sistema="TRANSMILENIO"] .menu-page .dashboard-welcome {
-  background: var(--coral) !important;
-  background-image: none !important;
+body.menu-page[data-sistema="TRANSMILENIO"] .dashboard-welcome {
+  background: linear-gradient(118deg, #9f1026, #c8102e) !important;
+  background-image: linear-gradient(118deg, #9f1026, #c8102e) !important;
   box-shadow: 0 18px 42px rgba(143, 23, 43, 0.22);
 }
 
-body[data-sistema="TRANSMILENIO"] .dashboard-welcome::before,
-body[data-sistema="TRANSMILENIO"] .dashboard-welcome::after {
-  border-color: rgba(255, 248, 214, 0.2);
+body.menu-page[data-sistema="TRANSMILENIO"] .dashboard-welcome::before,
+body.menu-page[data-sistema="TRANSMILENIO"] .dashboard-welcome::after {
+  border-color: rgba(242, 197, 0, 0.48);
 }
 
 body[data-sistema="TRANSMILENIO"] .dashboard-welcome .dashboard-eyebrow,
@@ -2034,7 +2034,8 @@ body.registration-page::after {
 
 .registration-card .form input[type="text"],
 .registration-card .form input[type="password"],
-.registration-card .form input[type="email"] {
+.registration-card .form input[type="email"],
+.registration-card .form select {
   width: 100%;
   min-height: 50px;
   padding: 13px 15px;
@@ -2044,6 +2045,12 @@ body.registration-page::after {
 }
 
 .registration-card .form input:focus {
+  border-color: var(--caribe);
+  box-shadow: 0 0 0 3px rgba(255, 86, 0, 0.12);
+}
+
+.registration-card .form select:focus {
+  outline: none;
   border-color: var(--caribe);
   box-shadow: 0 0 0 3px rgba(255, 86, 0, 0.12);
 }

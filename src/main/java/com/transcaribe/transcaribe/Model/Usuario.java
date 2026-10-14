@@ -16,6 +16,7 @@ public class Usuario {
 
     public static final String ROLE_USER = "ROLE_USER";
     public static final String ROLE_ADMIN = "ROLE_ADMIN";
+    public static final String ROLE_MODERATOR = "ROLE_MODERATOR";
     public static final String ROLE_CONDUCTOR = "ROLE_CONDUCTOR";
 
     @Id
@@ -39,6 +40,13 @@ public class Usuario {
 
     @Field("role")
     private String role = ROLE_USER;
+
+    /** Sistema que puede administrar una cuenta moderadora. */
+    @Field("sistema_asignado")
+    private SistemaTransporte sistemaAsignado;
+
+    @Field("sitm")
+    private SistemaTransporte sitm;
 
     @Field("activo")
     private boolean activo = true;
@@ -102,6 +110,11 @@ public class Usuario {
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    public SistemaTransporte getSistemaAsignado() { return sistemaAsignado; }
+    public void setSistemaAsignado(SistemaTransporte sistemaAsignado) { this.sistemaAsignado = sistemaAsignado; }
+    public SistemaTransporte getSitm() { return sitm; }
+    public void setSitm(SistemaTransporte sitm) { this.sitm = sitm; }
 
     public boolean isActivo() { return activo; }
     public void setActivo(boolean activo) { this.activo = activo; }
