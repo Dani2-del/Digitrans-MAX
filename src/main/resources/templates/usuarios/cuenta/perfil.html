@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <link rel="stylesheet" th:href="@{/css/usuario.css}" />
+  <meta charset="UTF-8" />
+  <title>Editar Perfil</title>
+    <th:block th:replace="~{fragments/loading-indicator :: styles}"></th:block>
+</head>
+<body>
+  <div class="page">
+
+    <main class="center-card">
+      <div class="card card-narrow">
+        <button class="back-arrow"
+                onclick="window.location.href='/menu'">
+          🡨
+        </button>
+
+        <h2 th:text="${codigoPendiente ? 'Confirma los cambios' : 'Editar credenciales'}">Editar credenciales</h2>
+        <p class="form-hint" th:unless="${codigoPendiente}">Actualiza tu nombre, correo o contraseña.</p>
+
+        <p class="success" th:if="${mensaje}" th:text="${mensaje}"></p>
+        <p class="error" th:if="${error}" th:text="${error}"></p>
+
+        <form class="form" th:if="${codigoPendiente}" th:action="@{/perfil/verificar}" method="post">
+          <p class="info-text">
+            Ingresa el código de 6 dígitos enviado a tu correo actual:<br>
+            <strong th:text="${correoVerificacion}"></strong>
+          </p>
+          <input type="text"
+                 id="codigo"
+                 name="codigo"
+                 inputmode="numeric"
+                 autocomplete="one-time-code"
+                 pattern="[0-9]{6}"
+                 maxlength="6"
+                 title="Deben ser 6 números"
+                 placeholder="000000"
+                 class="otp-input"
+                 required />
+          <button type="submit" class="primary">Confirmar cambios</button>
+        </form>
+
+        <div th:if="${codigoPendiente}" class="profile-code-actions">
+          <form th:action="@{/perfil/reenviar-codigo}" method="post" class="form">
+            <button type="submit" class="link-button">Volver a enviar código</button>
+          </form>
+          <form th:action="@{/perfil/cancelar-cambio}" method="post" class="form">
+            <button type="submit" class="link-button">Cancelar cambios</button>
+          </form>
+        </div>
+
+        <form class="form" th:unless="${codigoPendiente}" th:action="@{/perfil}" method="post">
+          <label for="nombre">Nombre</label>
+          <input type="text"
+                 id="nombre"
+                 name="nombre"
+                 th:value="${perfilNombre != null ? perfilNombre : usuario.nombre}"
+                 required />
+
+          <label for="correo">Correo</label>
+          <input type="email"
+                 id="correo"
+                 name="correo"
+                 th:value="${perfilCorreo != null ? perfilCorreo : usuario.correo}"
+                 required />
+
+          <label for="password">Nueva contraseña</label>
+          <input type="password"
+                 id="password"
+                 name="password"
+                 autocomplete="new-password"
+                 placeholder="Dejar vacío para no cambiar" />
+
+          <button type="submit" class="primary" style="margin-top: 10px;">
+            Enviar código y continuar
+          </button>
+
+        </form>
+
+      </div>
+    </main>
+
+  </div>
+    <th:block th:replace="~{fragments/loading-indicator :: overlay}"></th:block>
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digitrans — Sistema Integrado de Transporte Masivo</title>
+  <link rel="icon" th:href="@{/images/digitrans-mark.svg}" />
+  <link rel="stylesheet" th:href="@{/css/index.css}" />
+    <th:block th:replace="~{fragments/loading-indicator :: styles}"></th:block>
+</head>
+<body>
+
+  <!-- ===== HERO + NAV ===== -->
+  <section class="hero">
+    <div class="hero-illustration" aria-hidden="true"></div>
+
+    <nav class="landing-nav">
+      <a class="brand" th:href="@{/}">
+        <img th:src="@{/images/digitrans-mark.svg}" alt="Digitrans" />
+        <span>Digitrans</span>
+      </a>
+      <div class="nav-actions">
+        <a th:href="@{/login}" class="btn btn-outline">Iniciar sesión</a>
+        <a th:href="@{/registro}" class="btn btn-primary">Crear cuenta</a>
+      </div>
+    </nav>
+
+    <div class="wrap">
+      <div class="hero-content">
+        <span class="eyebrow-pill">Sistema Integrado de Transporte Masivo · Cartagena de Indias</span>
+        <h1>Tu ciudad, en <em>una sola tarjeta</em>.</h1>
+        <p class="lead">
+          Digitrans reúne tu registro, tu tarjeta digital, tus recargas y tus rutas
+          favoritas en un solo lugar, para que te muevas por la ciudad sin filas ni papeleo.
+        </p>
+        <div class="hero-ctas">
+          <a th:href="@{/registro}" class="btn btn-primary">Crear cuenta →</a>
+          <a th:href="@{/login}" class="btn btn-outline">Ya tengo cuenta</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="credit-ribbon">
+    <strong>Proyecto académico</strong> · Electiva I · Fundación Universitaria Tecnológico Comfenalco · Spring Boot + Thymeleaf
+  </div>
+
+  <!-- ===== QUÉ ES Digitrans ===== -->
+  <section class="section" id="que-es">
+    <div class="wrap about-grid">
+      <div>
+        <div class="section-head" style="margin-bottom: 28px;">
+          <h2>Qué es Digitrans</h2>
+          <p>
+            Es la plataforma digital del sistema de transporte masivo de Cartagena,
+            pensada para que cada pasajero administre su cuenta y su tarjeta desde
+            el celular o el computador, sin depender de un punto físico de atención.
+          </p>
+        </div>
+
+        <div class="about-points">
+          <div class="about-point">
+            <div class="dot">1</div>
+            <div>
+              <h3>Un solo perfil</h3>
+              <p>Correo verificado, contraseña y recuperación de cuenta propia, sin trámites en ventanilla.</p>
+            </div>
+          </div>
+          <div class="about-point">
+            <div class="dot">2</div>
+            <div>
+              <h3>Tarjeta y saldo en línea</h3>
+              <p>Vincula tus tarjetas, recarga por PSE o tarjeta de crédito y define alertas de saldo mínimo.</p>
+            </div>
+          </div>
+          <div class="about-point">
+            <div class="dot">3</div>
+            <div>
+              <h3>Rutas e historial</h3>
+              <p>Consulta las rutas disponibles, guarda tus favoritas y revisa cada viaje y recarga que hagas.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="about-card">
+        <img th:src="@{/images/bus.png}" alt="Ilustración de un autobús urbano" />
+        <p style="color: var(--piedra); font-size: 0.92rem; margin: 0 0 16px;">
+          Construido como proyecto de la Electiva I, replicando los flujos reales de un
+          sistema de transporte integrado: registro, verificación, pagos y roles diferenciados.
+        </p>
+        <div class="tag-row">
+          <span class="tag">Spring Boot</span>
+          <span class="tag">Thymeleaf</span>
+          <span class="tag">Spring Security</span>
+          <span class="tag">JWT</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CÓMO FUNCIONA ===== -->
+  <section class="section route-section" id="como-funciona">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Cómo funciona</h2>
+        <p>Cuatro paradas entre crear tu cuenta y subirte al bus.</p>
+      </div>
+
+      <div class="route-line">
+        <div class="stop">
+          <div class="stop-dot">1</div>
+          <h3>Regístrate</h3>
+          <p>Crea tu cuenta con tu correo, una contraseña y el número de tu tarjeta.</p>
+        </div>
+        <div class="stop">
+          <div class="stop-dot">2</div>
+          <h3>Verifica tu correo</h3>
+          <p>Confirmamos tu cuenta con un código de un solo uso enviado a tu correo.</p>
+        </div>
+        <div class="stop">
+          <div class="stop-dot">3</div>
+          <h3>Recarga tu saldo</h3>
+          <p>Elige PSE o tarjeta de crédito y recarga cuando lo necesites.</p>
+        </div>
+        <div class="stop">
+          <div class="stop-dot">4</div>
+          <h3>Sube y viaja</h3>
+          <p>Consulta rutas, guarda tus favoritas y revisa tu historial de viajes.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== RUTAS ===== -->
+  <section class="section" id="rutas">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Conoce el mapa de rutas</h2>
+        <p>El sistema combina troncales, pretroncales, alimentadoras y complementarias para cubrir la ciudad.</p>
+      </div>
+
+      <div class="map-showcase">
+        <img th:src="@{/images/Rutas/preview/mapa-general.jpg}" alt="Mapa general del sistema Digitrans" />
+      </div>
+      <p style="text-align:center; margin: 20px 0;">
+        <a th:href="@{/mapa-rutas}" class="primary">Probar mapa de rutas (Beta)</a>
+      </p>
+
+      <div class="route-cards">
+        <figure class="route-card-img" style="--rc: var(--coral);">
+          <span class="route-badge">Troncal</span>
+          <img th:src="@{/images/Rutas/preview/t100e.jpg}" alt="Ruta troncal T100E, Portal - Centro" />
+          <figcaption>T100E · Portal - Centro</figcaption>
+        </figure>
+        <figure class="route-card-img" style="--rc: var(--caribe);">
+          <span class="route-badge">Pretroncal</span>
+          <img th:src="@{/images/Rutas/preview/x101.jpg}" alt="Ruta pretroncal X101, Campanos - Centro" />
+          <figcaption>X101 · Campanos - Centro</figcaption>
+        </figure>
+        <figure class="route-card-img" style="--rc: var(--indigo);">
+          <span class="route-badge">Alimentadora</span>
+          <img th:src="@{/images/Rutas/preview/a102.jpg}" alt="Ruta alimentadora A102, Portal - Universidad Tecnológica" />
+          <figcaption>A102 · Portal - UTB</figcaption>
+        </figure>
+        <figure class="route-card-img" style="--rc: var(--verde);">
+          <span class="route-badge">Complementaria</span>
+          <img th:src="@{/images/Rutas/preview/c001.jpg}" alt="Ruta complementaria C001, Ciudad Jardín - Manga - Centro" />
+          <figcaption>C001 · Manga - Centro</figcaption>
+        </figure>
+      </div>
+      <p class="rutas-note">Vista previa de algunas rutas reales del sistema · dentro de la app encuentras el listado completo y tus rutas favoritas.</p>
+    </div>
+  </section>
+
+  <!-- ===== ROLES ===== -->
+  <section class="section" id="roles">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Tres formas de usar la plataforma</h2>
+        <p>Cada rol tiene su propio panel, con lo que necesita y nada más.</p>
+      </div>
+
+      <div class="roles-grid">
+        <div class="role-card" style="--role-color: var(--coral);">
+          <div class="role-kicker">Pasajero</div>
+          <h3>Usuario</h3>
+          <ul>
+            <li>Registro y verificación por correo</li>
+            <li>Tarjeta digital y recargas</li>
+            <li>Rutas favoritas e historial de viajes</li>
+            <li>Alertas de saldo mínimo</li>
+          </ul>
+        </div>
+        <div class="role-card" style="--role-color: var(--caribe);">
+          <div class="role-kicker">Operación</div>
+          <h3>Conductor</h3>
+          <ul>
+            <li>Panel con la ruta y el turno asignado</li>
+            <li>Consulta de horarios</li>
+            <li>Vista propia, separada de la de pasajeros</li>
+          </ul>
+        </div>
+        <div class="role-card" style="--role-color: var(--tinta);">
+          <div class="role-kicker">Gestión</div>
+          <h3>Administrador</h3>
+          <ul>
+            <li>Gestión de flota y horarios</li>
+            <li>Panel administrativo centralizado</li>
+            <li>Control de usuarios y conductores</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA FINAL ===== -->
+  <section class="final-cta">
+    <div class="wrap">
+      <img th:src="@{/images/bus.png}" alt="Autobús urbano" class="cta-bus" />
+      <h2>¿Listo para subirte?</h2>
+      <p>Crea tu cuenta en unos minutos y deja el efectivo y las filas atrás.</p>
+      <a th:href="@{/registro}" class="btn btn-primary">Crear cuenta →</a>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <div class="footer-extra">
+    <div class="wrap tag-row">
+      <span class="tag">Java</span>
+      <span class="tag">Spring Boot</span>
+      <span class="tag">Thymeleaf</span>
+      <span class="tag">MySQL</span>
+    </div>
+    <div th:replace="~{fragments/footer :: footer}"></div>
+  </div>
+
+    <th:block th:replace="~{fragments/loading-indicator :: overlay}"></th:block>
+</body>
+</html>

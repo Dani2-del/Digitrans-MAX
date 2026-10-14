@@ -1,0 +1,28 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:${SERVER_PORT}"
+    environment:
+      # Conexión a tu MongoDB Atlas (Nube)
+      - SPRING_DATA_MONGODB_URI=${SPRING_DATA_MONGODB_URI}
+      
+      # Configuración de Correo (Gmail)
+      - SPRING_MAIL_USERNAME=${SPRING_MAIL_USERNAME}
+      - SPRING_MAIL_PASSWORD=${SPRING_MAIL_PASSWORD}
+      
+      # Seguridad JWT
+      - APP_JWT_SECRET=${APP_JWT_SECRET}
+      
+      # Google OAuth2
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      
+      # Puerto configurado en tu properties
+      - SERVER_PORT=${SERVER_PORT}
+    restart: always
+
+# db:
+#   image: mongo:latest
+#   ports:
+#     - "27017:27017"
