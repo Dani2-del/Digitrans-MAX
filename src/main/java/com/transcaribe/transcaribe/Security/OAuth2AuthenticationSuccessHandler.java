@@ -74,9 +74,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         boolean esModerador = Usuario.ROLE_MODERATOR.equals(usuario.getRole());
         boolean esConductor = Usuario.ROLE_CONDUCTOR.equals(usuario.getRole());
 
-        if (esModerador) {
-            response.sendRedirect("/menu");
-        } else if (esAdmin || esConductor) {
+        if (esAdmin || esModerador || esConductor) {
             response.sendRedirect("/choose-view");
         } else {
             response.sendRedirect("/menu");

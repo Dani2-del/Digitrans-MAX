@@ -18,6 +18,8 @@ public class ChatMessage {
 
     private String authorId;
 
+    private SistemaTransporte sistemaTransporte = SistemaTransporte.TRANSCARIBE;
+
     private String text;
 
     private byte[] image;
@@ -57,6 +59,14 @@ public class ChatMessage {
 
     public String getAuthorId() {
         return authorId;
+    }
+
+    public SistemaTransporte getSistemaTransporte() {
+        return sistemaTransporte == null ? SistemaTransporte.TRANSCARIBE : sistemaTransporte;
+    }
+
+    public void setSistemaTransporte(SistemaTransporte sistemaTransporte) {
+        this.sistemaTransporte = sistemaTransporte;
     }
 
     public void setAuthorId(String authorId) {

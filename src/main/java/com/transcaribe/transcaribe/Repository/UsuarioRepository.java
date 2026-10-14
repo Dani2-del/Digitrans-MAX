@@ -10,6 +10,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 
 import com.transcaribe.transcaribe.Model.Usuario;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 
 public interface UsuarioRepository extends MongoRepository<Usuario, String> {
 
@@ -29,9 +30,19 @@ public interface UsuarioRepository extends MongoRepository<Usuario, String> {
     @Query("{}")
     Stream<Usuario> streamAll();
 
+    @Query("{ '$or': [ " +
+            "{ 'role': 'ROLE_MODERATOR', 'sistema_asignado': ?0 }, " +
+            "{ 'role': { '$ne': 'ROLE_MODERATOR' }, 'sitm': ?0 } " +
+            "] }")
+    Stream<Usuario> streamBySistemaTransporte(SistemaTransporte sistemaTransporte);
+
     @Query("{ 'rutas_favoritas': { $regex: ?0, $options: 'i' } }")
     List<Usuario> findByRutaFavoritaIgnoreCase(String rutaRegex);
 
     @Query("{ 'tarjetas.numeroTarjeta': ?0 }")
     Optional<Usuario> findByNumeroTarjetaEnLista(String numeroTarjeta);
+
+    @Query("{ 'tarjetas': { '$elemMatch': { 'numeroTarjeta': ?0, 'sistemaTransporte': ?1 } } }")
+    Optional<Usuario> findByNumeroTarjetaEnListaYSistema(
+            String numeroTarjeta, SistemaTransporte sistemaTransporte);
 }

@@ -3,6 +3,7 @@ package com.transcaribe.transcaribe.Controller;
 import com.transcaribe.transcaribe.Model.Bus;
 import com.transcaribe.transcaribe.Model.HorarioConductor;
 import com.transcaribe.transcaribe.Model.Usuario;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 import com.transcaribe.transcaribe.Repository.BusRepository;
 import com.transcaribe.transcaribe.Repository.HorarioConductorRepository;
 import com.transcaribe.transcaribe.Repository.UsuarioRepository;
@@ -14,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpSession;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +48,7 @@ public class ConductorController {
     }
 
     @GetMapping("/choose-view")
-    public String chooseView(Model model) {
+    public String chooseView(Model model, HttpSession session) {
         Usuario usuario = obtenerUsuarioLogueado();
 
         if (usuario == null) {
@@ -64,7 +66,11 @@ public class ConductorController {
 
         model.addAttribute("nombre", usuario.getNombre());
         model.addAttribute("usuario", usuario);
-        model.addAttribute("alertasAdmin", avisoAdministrativoService.obtenerPendientes(usuario.getId()));
+        SistemaTransporte sistemaAvisos = esModerador ? usuario.getSistemaAsignado()
+                : esAdmin && session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE) instanceof SistemaTransporte sistema
+                    ? sistema : usuario.getSitm();
+        model.addAttribute("alertasAdmin", avisoAdministrativoService.obtenerPendientes(usuario.getId(),
+                sistemaAvisos == null ? SistemaTransporte.TRANSCARIBE : sistemaAvisos));
         model.addAttribute("alertaReturnTo", "/choose-view");
         model.addAttribute("esAdmin", esAdmin);
         model.addAttribute("esModerador", esModerador);

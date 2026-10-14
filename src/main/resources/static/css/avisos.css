@@ -419,6 +419,45 @@
     white-space: pre-wrap;
 }
 
+body[data-sistema="TRANSMILENIO"] .admin-alert-card {
+    border-top-color: #c8102e;
+}
+
+body[data-sistema="TRANSMILENIO"] .admin-alert-label,
+body.admin-announcements-page[data-sistema="TRANSMILENIO"] .admin-announcements-back {
+    color: #a50f26;
+}
+
+body[data-sistema="TRANSMILENIO"] .admin-alert-close,
+body.admin-announcements-page[data-sistema="TRANSMILENIO"] .announcement-submit {
+    background: linear-gradient(120deg, #a50f26, #c8102e);
+}
+
+body[data-sistema="TRANSMILENIO"] .admin-alert-close:hover {
+    box-shadow: 0 8px 20px rgba(200, 16, 46, 0.28);
+}
+
+body.admin-announcements-page[data-sistema="TRANSMILENIO"] .announcement-role-filters input,
+body.admin-announcements-page[data-sistema="TRANSMILENIO"] .announcement-radio input,
+body.admin-announcements-page[data-sistema="TRANSMILENIO"] .announcement-recipient input {
+    accent-color: #c8102e;
+}
+
+body.admin-announcements-page[data-sistema="TRANSMILENIO"] .announcement-submit:hover,
+body.admin-announcements-page[data-sistema="TRANSMILENIO"] .announcement-history-link:hover {
+    background: #a50f26;
+}
+
+body.admin-announcements-page[data-sistema="TRANSMILENIO"] .announcement-history-link {
+    border-color: #c8102e;
+    background: #fff4f5;
+    color: #a50f26;
+}
+
+body.admin-announcements-page[data-sistema="TRANSMILENIO"] .announcement-history-link:hover {
+    color: #fff;
+}
+
 .announcement-history-item > span,
 .announcement-history-meta {
     flex: 0 0 auto;

@@ -1,6 +1,7 @@
 package com.transcaribe.transcaribe.Controller;
 
 import com.transcaribe.transcaribe.Model.Usuario;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 import com.transcaribe.transcaribe.Repository.UsuarioRepository;
 import com.transcaribe.transcaribe.service.AvisoAdministrativoService;
 import org.springframework.http.CacheControl;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
+import jakarta.servlet.http.HttpSession;
 
 @Controller
 public class AvisoUsuarioController {
@@ -29,14 +31,15 @@ public class AvisoUsuarioController {
 
     @GetMapping("/avisos/{avisoId}/imagen")
     public ResponseEntity<byte[]> obtenerImagen(@PathVariable String avisoId,
-                                                Authentication authentication) {
+                                                Authentication authentication, HttpSession session) {
         Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        SistemaTransporte sistema = sistemaUsuario(usuario, session);
         try {
             AvisoAdministrativoService.ImagenAviso imagen =
                     avisoService.obtenerImagenParaUsuario(avisoId, usuario.getId(),
                             authentication.getAuthorities().stream()
-                                    .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority())));
+                                    .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority())), sistema);
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(imagen.tipoContenido()))
                     .cacheControl(CacheControl.noStore())
@@ -52,15 +55,27 @@ public class AvisoUsuarioController {
     @PostMapping("/avisos/{avisoId}/cerrar")
     public String cerrarAviso(@PathVariable String avisoId,
                               @RequestParam(defaultValue = "/menu") String volverA,
-                              Authentication authentication) {
+                              Authentication authentication, HttpSession session) {
         Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        SistemaTransporte sistema = sistemaUsuario(usuario, session);
         try {
-            avisoService.descartarParaUsuario(avisoId, usuario.getId());
+            avisoService.descartarParaUsuario(avisoId, usuario.getId(), sistema);
         } catch (SecurityException exception) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, exception.getMessage());
         }
         return "redirect:" + rutaPermitida(volverA);
+    }
+
+    private SistemaTransporte sistemaUsuario(Usuario usuario, HttpSession session) {
+        if (Usuario.ROLE_MODERATOR.equals(usuario.getRole())) return usuario.getSistemaAsignado();
+        if (Usuario.ROLE_ADMIN.equals(usuario.getRole())) {
+            Object sistema = session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE);
+            return sistema instanceof SistemaTransporte seleccionado && seleccionado.estaDisponible()
+                    ? seleccionado : null;
+        }
+        SistemaTransporte sistema = usuario.getSitm();
+        return sistema != null && sistema.estaDisponible() ? sistema : SistemaTransporte.TRANSCARIBE;
     }
 
     private String rutaPermitida(String ruta) {

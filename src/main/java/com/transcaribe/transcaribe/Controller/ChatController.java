@@ -1,6 +1,7 @@
 package com.transcaribe.transcaribe.Controller;
 
 import com.transcaribe.transcaribe.Model.ChatMessage;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 import com.transcaribe.transcaribe.Model.Usuario;
 import com.transcaribe.transcaribe.Repository.UsuarioRepository;
 import org.springframework.data.mongodb.core.FindAndModifyOptions;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -56,27 +58,32 @@ public class ChatController {
     }
 
     @GetMapping
-    public String mostrarChat(Authentication authentication, Model model) {
-        Usuario participante = obtenerParticipante(authentication);
-        model.addAttribute("urlPanel", Usuario.ROLE_ADMIN.equals(participante.getRole())
-                ? "/admin/dashboard" : "/conductor/panel");
+    public String mostrarChat(Authentication authentication, HttpSession session, Model model) {
+        Usuario participante = obtenerParticipante(authentication, session);
+        SistemaTransporte sistema = obtenerSistema(participante, session);
+        if (sistema == null) return "redirect:/admin/seleccionar-entidad";
+        model.addAttribute("urlPanel", Usuario.ROLE_CONDUCTOR.equals(participante.getRole())
+                ? "/conductor/panel" : "/admin/dashboard");
         model.addAttribute("rolParticipante", participante.getRole());
+        model.addAttribute("sistemaActual", sistema);
         return "chat/sala";
     }
 
     @GetMapping("/mensajes")
     @ResponseBody
-    public List<MensajeRespuesta> listarMensajes(Authentication authentication) {
-        Usuario participante = obtenerParticipante(authentication);
-        return obtenerMensajes(participante.getId());
+    public List<MensajeRespuesta> listarMensajes(Authentication authentication, HttpSession session) {
+        Usuario participante = obtenerParticipante(authentication, session);
+        SistemaTransporte sistema = requerirSistema(participante, session);
+        return obtenerMensajes(participante.getId(), sistema);
     }
 
     @PostMapping(value = "/mensajes", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseBody
     public MensajeRespuesta enviarMensajeApi(@RequestParam(required = false) String texto,
                                              @RequestParam(name = "imagen", required = false) MultipartFile imagen,
-                                             Authentication authentication) {
-        Usuario autor = obtenerParticipante(authentication);
+                                             Authentication authentication, HttpSession session) {
+        Usuario autor = obtenerParticipante(authentication, session);
+        SistemaTransporte sistema = requerirSistema(autor, session);
         String contenido = texto == null ? "" : texto.trim();
         if (contenido.length() > MAX_MESSAGE_LENGTH) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -92,6 +99,7 @@ public class ChatController {
         mensaje.setAuthorId(autor.getId());
         mensaje.setAuthorName(autor.getNombre());
         mensaje.setAuthorRole(autor.getRole());
+        mensaje.setSistemaTransporte(sistema);
         mensaje.setText(contenido);
         mensaje.setCreatedAt(LocalDateTime.now());
         if (imagenValidada != null) {
@@ -107,8 +115,9 @@ public class ChatController {
     @ResponseBody
     public MensajeRespuesta editarMensaje(@PathVariable String mensajeId,
                                           @RequestBody EditarMensajeSolicitud solicitud,
-                                          Authentication authentication) {
-        Usuario autor = obtenerParticipante(authentication);
+                                          Authentication authentication, HttpSession session) {
+        Usuario autor = obtenerParticipante(authentication, session);
+        SistemaTransporte sistema = requerirSistema(autor, session);
         String contenido = solicitud == null || solicitud.texto() == null
                 ? "" : solicitud.texto().trim();
         if (contenido.isEmpty() || contenido.length() > MAX_MESSAGE_LENGTH) {
@@ -117,9 +126,11 @@ public class ChatController {
         }
 
         LocalDateTime ahora = LocalDateTime.now();
-        Query query = new Query(Criteria.where("_id").is(mensajeId)
-                .and("authorId").is(autor.getId())
-                .and("createdAt").gte(ahora.minus(EDIT_WINDOW)).lte(ahora));
+        Query query = new Query(new Criteria().andOperator(
+                Criteria.where("_id").is(mensajeId),
+                criterioSala(sistema),
+                Criteria.where("authorId").is(autor.getId()),
+                Criteria.where("createdAt").gte(ahora.minus(EDIT_WINDOW)).lte(ahora)));
         Update update = new Update().set("text", contenido).set("editedAt", ahora);
         ChatMessage actualizado = mongoTemplate.findAndModify(
                 query, update, FindAndModifyOptions.options().returnNew(true), ChatMessage.class);
@@ -133,10 +144,12 @@ public class ChatController {
     @GetMapping("/mensajes/{mensajeId}/imagen")
     @ResponseBody
     public ResponseEntity<byte[]> obtenerImagen(@PathVariable String mensajeId,
-                                                Authentication authentication) {
-        obtenerParticipante(authentication);
+                                                Authentication authentication, HttpSession session) {
+        Usuario participante = obtenerParticipante(authentication, session);
+        SistemaTransporte sistema = requerirSistema(participante, session);
         ChatMessage mensaje = mongoTemplate.findById(mensajeId, ChatMessage.class);
-        if (mensaje == null || (!mensaje.isHasImage() && mensaje.getImage() == null)
+        if (mensaje == null || mensaje.getSistemaTransporte() != sistema
+                || (!mensaje.isHasImage() && mensaje.getImage() == null)
                 || mensaje.getImageContentType() == null || mensaje.getImage() == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
@@ -157,9 +170,10 @@ public class ChatController {
 
     @PostMapping("/enviar")
     public String enviarMensaje(@RequestParam(required = false) String texto,
-                                Authentication authentication,
+                                Authentication authentication, HttpSession session,
                                 RedirectAttributes redirectAttributes) {
-        Usuario autor = obtenerParticipante(authentication);
+        Usuario autor = obtenerParticipante(authentication, session);
+        SistemaTransporte sistema = requerirSistema(autor, session);
         String contenido = texto == null ? "" : texto.trim();
         if (contenido.isEmpty() || contenido.length() > MAX_MESSAGE_LENGTH) {
             redirectAttributes.addFlashAttribute("errorChat",
@@ -171,32 +185,67 @@ public class ChatController {
         mensaje.setAuthorId(autor.getId());
         mensaje.setAuthorName(autor.getNombre());
         mensaje.setAuthorRole(autor.getRole());
+        mensaje.setSistemaTransporte(sistema);
         mensaje.setText(contenido);
         mensaje.setCreatedAt(LocalDateTime.now());
         mongoTemplate.save(mensaje);
         return "redirect:/chat";
     }
 
-    private Usuario obtenerParticipante(Authentication authentication) {
+    private Usuario obtenerParticipante(Authentication authentication, HttpSession session) {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
         Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
                 .filter(Usuario::isActivo)
                 .filter(candidato -> Usuario.ROLE_ADMIN.equals(candidato.getRole())
+                        || Usuario.ROLE_MODERATOR.equals(candidato.getRole())
                         || Usuario.ROLE_CONDUCTOR.equals(candidato.getRole()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
+        if (Usuario.ROLE_MODERATOR.equals(usuario.getRole())) {
+            SistemaTransporte asignado = usuario.getSistemaAsignado();
+            if (asignado == null || !asignado.estaDisponible()) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+            session.setAttribute(SistemaTransporte.SESSION_ATTRIBUTE, asignado);
+        }
         return usuario;
     }
 
-    private List<MensajeRespuesta> obtenerMensajes(String participanteId) {
-        Query query = new Query()
+    private SistemaTransporte obtenerSistema(Usuario usuario, HttpSession session) {
+        if (Usuario.ROLE_MODERATOR.equals(usuario.getRole())) return usuario.getSistemaAsignado();
+        if (Usuario.ROLE_CONDUCTOR.equals(usuario.getRole())) {
+            SistemaTransporte sitm = usuario.getSitm();
+            return sitm != null && sitm.estaDisponible() ? sitm : SistemaTransporte.TRANSCARIBE;
+        }
+        Object seleccionado = session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE);
+        return seleccionado instanceof SistemaTransporte sistema && sistema.estaDisponible() ? sistema : null;
+    }
+
+    private SistemaTransporte requerirSistema(Usuario usuario, HttpSession session) {
+        SistemaTransporte sistema = obtenerSistema(usuario, session);
+        if (sistema == null) throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "Selecciona un servicio para abrir su chat operativo.");
+        return sistema;
+    }
+
+    private List<MensajeRespuesta> obtenerMensajes(String participanteId, SistemaTransporte sistema) {
+        Query query = new Query(criterioSala(sistema))
                 .with(Sort.by(Sort.Direction.DESC, "createdAt"))
                 .limit(MAX_MESSAGES);
         query.fields().exclude("image");
         List<ChatMessage> mensajes = mongoTemplate.find(query, ChatMessage.class);
         Collections.reverse(mensajes);
         return mensajes.stream().map(mensaje -> crearRespuesta(mensaje, participanteId)).toList();
+    }
+
+    private Criteria criterioSala(SistemaTransporte sistema) {
+        if (sistema == SistemaTransporte.TRANSCARIBE) {
+            return new Criteria().orOperator(
+                    Criteria.where("sistemaTransporte").is(sistema),
+                    Criteria.where("sistemaTransporte").exists(false));
+        }
+        return Criteria.where("sistemaTransporte").is(sistema);
     }
 
     private MensajeRespuesta crearRespuesta(ChatMessage mensaje, String participanteId) {
@@ -268,7 +317,9 @@ public class ChatController {
     }
 
     private String etiquetaRol(String role) {
-        return Usuario.ROLE_ADMIN.equals(role) ? "Administrador" : "Conductor";
+        if (Usuario.ROLE_ADMIN.equals(role)) return "Administrador";
+        if (Usuario.ROLE_MODERATOR.equals(role)) return "Moderador";
+        return "Conductor";
     }
 
     public record MensajeRespuesta(String id, String authorName, String authorRole, String text,

@@ -59,6 +59,9 @@ public class ServiceTranscaribe {
         if (numeroLimpio.length() != 10) {
             return false;
         }
+        if (repositorioUsuarios.findByNumeroTarjetaEnListaYSistema(numeroLimpio, sitm).isPresent()) {
+            return false;
+        }
         
         String codigoOtp = String.format("%06d", GENERADOR_CODIGOS.nextInt(1000000));
 
@@ -248,10 +251,16 @@ public class ServiceTranscaribe {
      * y comprueba de inmediato si el saldo actual ya se encuentra por debajo del umbral.
      */
     public boolean establecerLimiteSaldo(Usuario usuario, String numeroTarjeta, BigDecimal limiteSaldo) {
+        return establecerLimiteSaldo(usuario, numeroTarjeta, limiteSaldo, SistemaTransporte.TRANSCARIBE);
+    }
+
+    public boolean establecerLimiteSaldo(
+            Usuario usuario, String numeroTarjeta, BigDecimal limiteSaldo, SistemaTransporte sistemaTransporte) {
         if (usuario == null || numeroTarjeta == null || limiteSaldo == null) return false;
 
         return usuario.getTarjetas().stream()
                 .filter(t -> t.getNumeroTarjeta().equals(numeroTarjeta))
+                .filter(t -> t.getSistemaTransporte() == sistemaTransporte)
                 .findFirst()
                 .map(t -> {
                     t.setLimiteSaldo(limiteSaldo);
@@ -415,10 +424,15 @@ public class ServiceTranscaribe {
 
     public boolean agregarNuevaTarjeta(
             String idUsuario, String nuevoNumero, SistemaTransporte sistemaTransporte) {
+        if (sistemaTransporte == null || !sistemaTransporte.estaDisponible()
+                || repositorioUsuarios.findByNumeroTarjetaEnListaYSistema(nuevoNumero, sistemaTransporte).isPresent()) {
+            return false;
+        }
         Optional<Usuario> opt = repositorioUsuarios.findById(idUsuario);
         if (opt.isPresent()) {
             Usuario u = opt.get();
-            boolean existe = u.getTarjetas().stream().anyMatch(t -> t.getNumeroTarjeta().equals(nuevoNumero));
+            boolean existe = u.getTarjetas().stream().anyMatch(t -> t.getNumeroTarjeta().equals(nuevoNumero)
+                    && t.getSistemaTransporte() == sistemaTransporte);
             if (!existe) {
                 u.agregarTarjeta(nuevoNumero, BigDecimal.ZERO, sistemaTransporte);
                 repositorioUsuarios.save(u);
@@ -437,7 +451,7 @@ public class ServiceTranscaribe {
     }
 
     /**
-     * Vincula una nueva tarjeta verificando la no existencia global en la base de datos.
+     * Vincula una tarjeta si el número todavía no existe dentro del SITM seleccionado.
      */
     public String agregarNuevaTarjetaConValidacion(String idUsuario, String nuevoNumero) {
         return agregarNuevaTarjetaConValidacion(idUsuario, nuevoNumero, SistemaTransporte.TRANSCARIBE);
@@ -445,7 +459,11 @@ public class ServiceTranscaribe {
 
     public String agregarNuevaTarjetaConValidacion(
             String idUsuario, String nuevoNumero, SistemaTransporte sistemaTransporte) {
-        Optional<Usuario> dueñoExistente = repositorioUsuarios.findByNumeroTarjetaEnLista(nuevoNumero);
+        if (sistemaTransporte == null || !sistemaTransporte.estaDisponible()) {
+            return "Sistema de transporte inválido.";
+        }
+        Optional<Usuario> dueñoExistente = repositorioUsuarios
+                .findByNumeroTarjetaEnListaYSistema(nuevoNumero, sistemaTransporte);
         
         if (dueñoExistente.isPresent()) {
             return "La tarjeta ya está registrada por otro usuario.";
@@ -456,7 +474,8 @@ public class ServiceTranscaribe {
             Usuario u = opt.get();
             
             boolean yaLaTiene = u.getTarjetas().stream()
-                    .anyMatch(t -> t.getNumeroTarjeta().equals(nuevoNumero));
+                    .anyMatch(t -> t.getNumeroTarjeta().equals(nuevoNumero)
+                            && t.getSistemaTransporte() == sistemaTransporte);
             
             if (!yaLaTiene) {
                 u.agregarTarjeta(nuevoNumero, BigDecimal.ZERO, sistemaTransporte);
@@ -473,10 +492,16 @@ public class ServiceTranscaribe {
      * Remueve una tarjeta vinculada garantizando que el usuario conserve al menos una.
      */
     public boolean eliminarTarjetaDeUsuario(String usuarioId, String numeroTarjeta) {
+        return eliminarTarjetaDeUsuario(usuarioId, numeroTarjeta, SistemaTransporte.TRANSCARIBE);
+    }
+
+    public boolean eliminarTarjetaDeUsuario(
+            String usuarioId, String numeroTarjeta, SistemaTransporte sistemaTransporte) {
         return repositorioUsuarios.findById(usuarioId).map(usuario -> {
             if (usuario.getTarjetas().size() > 1) {
                 boolean removida = usuario.getTarjetas().removeIf(t -> 
-                    t.getNumeroTarjeta().equals(numeroTarjeta));
+                    t.getNumeroTarjeta().equals(numeroTarjeta)
+                            && t.getSistemaTransporte() == sistemaTransporte);
                 
                 if (removida) {
                     repositorioUsuarios.save(usuario); 

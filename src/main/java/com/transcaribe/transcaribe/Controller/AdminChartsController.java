@@ -42,10 +42,12 @@ public class AdminChartsController {
     }
 
     @GetMapping
-    public String mostrarGraficas(Model model, Authentication authentication) {
+    public String mostrarGraficas(Model model, Authentication authentication, HttpSession session) {
+        SistemaTransporte sistemaActual = (SistemaTransporte) session.getAttribute(
+                SistemaTransporte.SESSION_ATTRIBUTE);
         usuarioRepository.findByCorreo(authentication.getName()).ifPresent(usuario ->
                 model.addAttribute("alertasAdmin",
-                        avisoAdministrativoService.obtenerPendientes(usuario.getId())));
+                        avisoAdministrativoService.obtenerPendientes(usuario.getId(), sistemaActual)));
         model.addAttribute("alertaReturnTo", "/admin/graficas");
         return "admin/graficas";
     }
@@ -134,7 +136,8 @@ public class AdminChartsController {
                 mongoTemplate.getCollection("usuarios").countDocuments(filtroUsuariosSistema(sistemaActual)),
                 mongoTemplate.getCollection("transacciones").countDocuments(filtroSistema(sistemaActual)),
                 mongoTemplate.getCollection("horarios_conductor").countDocuments(),
-                mongoTemplate.getCollection("avisos_administrativos").countDocuments(),
+                mongoTemplate.getCollection("avisos_administrativos")
+                        .countDocuments(filtroAvisosSistema(sistemaActual)),
                 usuariosPorRol,
                 transaccionesPorMes,
                 transaccionesPorTipo,
@@ -168,6 +171,15 @@ public class AdminChartsController {
     }
 
     private Document filtroSistema(SistemaTransporte sistemaActual) {
+        if (sistemaActual == SistemaTransporte.TRANSCARIBE) {
+            return new Document("$or", List.of(
+                    new Document("sistema_transporte", SistemaTransporte.TRANSCARIBE.name()),
+                    new Document("sistema_transporte", null)));
+        }
+        return new Document("sistema_transporte", sistemaActual.name());
+    }
+
+    private Document filtroAvisosSistema(SistemaTransporte sistemaActual) {
         if (sistemaActual == SistemaTransporte.TRANSCARIBE) {
             return new Document("$or", List.of(
                     new Document("sistema_transporte", SistemaTransporte.TRANSCARIBE.name()),

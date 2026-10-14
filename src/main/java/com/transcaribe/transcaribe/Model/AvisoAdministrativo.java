@@ -3,6 +3,7 @@ package com.transcaribe.transcaribe.Model;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -28,6 +29,9 @@ public class AvisoAdministrativo {
 
     @Field("fecha_creacion")
     private LocalDateTime fechaCreacion;
+
+    @Field("sistema_transporte")
+    private SistemaTransporte sistemaTransporte = SistemaTransporte.TRANSCARIBE;
 
     @Field("destinatarios")
     private List<String> destinatarios = new ArrayList<>();
@@ -64,6 +68,13 @@ public class AvisoAdministrativo {
 
     public LocalDateTime getFechaCreacion() { return fechaCreacion; }
     public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
+
+    public SistemaTransporte getSistemaTransporte() {
+        return sistemaTransporte == null ? SistemaTransporte.TRANSCARIBE : sistemaTransporte;
+    }
+    public void setSistemaTransporte(SistemaTransporte sistemaTransporte) {
+        this.sistemaTransporte = sistemaTransporte;
+    }
 
     public List<String> getDestinatarios() { return destinatarios; }
     public void setDestinatarios(List<String> destinatarios) { this.destinatarios = destinatarios; }

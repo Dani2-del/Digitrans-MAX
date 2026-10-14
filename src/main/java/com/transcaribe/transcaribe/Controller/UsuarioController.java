@@ -147,7 +147,7 @@ public class UsuarioController {
         model.addAttribute("esAdministradorGlobal", esAdmin);
         model.addAttribute("esTransmilenio", sistemaActual == SistemaTransporte.TRANSMILENIO);
         model.addAttribute("sistemasTransporte", SistemaTransporte.disponibles());
-        model.addAttribute("alertasAdmin", avisoAdministrativoService.obtenerPendientes(usuario.getId()));
+        model.addAttribute("alertasAdmin", avisoAdministrativoService.obtenerPendientes(usuario.getId(), sistemaActual));
         model.addAttribute("alertaReturnTo", "/menu");
         return "usuarios/cuenta/menu";
     }

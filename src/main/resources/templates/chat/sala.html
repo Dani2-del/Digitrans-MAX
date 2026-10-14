@@ -28,21 +28,21 @@
 </header>
 <main class="chat-page">
     <header class="chat-header">
-        <a class="chat-back" th:if="${rolParticipante == 'ROLE_ADMIN'}" th:href="${urlPanel}">
+        <a class="chat-back" th:if="${rolParticipante != 'ROLE_CONDUCTOR'}" th:href="${urlPanel}">
             <span aria-hidden="true">←</span> Volver al panel
         </a>
         <div>
-            <p class="chat-eyebrow">DIGITRANS · COORDINACIÓN</p>
+            <p class="chat-eyebrow" th:text="|${sistemaActual.nombre} · COORDINACIÓN OPERATIVA|">DIGITRANS · COORDINACIÓN</p>
             <h1>Chat operativo</h1>
-            <p class="chat-subtitle">Espacio compartido para administradores y conductores.</p>
+            <p class="chat-subtitle">Espacio compartido de <span th:text="${sistemaActual.nombre}">Transcaribe</span> para administradores, moderadores y conductores.</p>
         </div>
-        <span class="chat-access-badge">Solo administración y conductores</span>
+        <span class="chat-access-badge" th:text="|Sala ${sistemaActual.nombre}|">Sala Transcaribe</span>
     </header>
 
     <section class="chat-card" aria-label="Conversación">
         <div class="chat-toolbar">
             <div>
-                <strong>Sala general</strong>
+                <strong th:text="|Sala ${sistemaActual.nombre}|">Sala Transcaribe</strong>
                 <span>Los últimos 100 mensajes</span>
             </div>
             <span class="chat-live"><span></span> Actualización automática</span>

@@ -283,7 +283,7 @@ public class TarjetaController {
         boolean perteneceAlSistema = obtenerTarjetasDelSistema(usuario, sistema).stream()
                 .anyMatch(tarjeta -> numeroTarjeta.equals(tarjeta.getNumeroTarjeta()));
         boolean eliminado = perteneceAlSistema
-                && service.eliminarTarjetaDeUsuario(usuario.getId(), numeroTarjeta);
+                && service.eliminarTarjetaDeUsuario(usuario.getId(), numeroTarjeta, sistema);
         
         if (eliminado) {
             redirectAttributes.addFlashAttribute("mensaje", "Tarjeta eliminada ✅");
@@ -334,7 +334,7 @@ public class TarjetaController {
         boolean perteneceAlSistema = obtenerTarjetasDelSistema(usuario, sistema).stream()
                 .anyMatch(tarjeta -> numeroTarjeta.equals(tarjeta.getNumeroTarjeta()));
         boolean exito = perteneceAlSistema
-                && service.establecerLimiteSaldo(usuario, numeroTarjeta, limiteSaldo);
+                && service.establecerLimiteSaldo(usuario, numeroTarjeta, limiteSaldo, sistema);
 
         if (exito) {
             redirectAttributes.addFlashAttribute("mensaje", "¡Alerta de saldo mínimo configurada correctamente! 🔔");

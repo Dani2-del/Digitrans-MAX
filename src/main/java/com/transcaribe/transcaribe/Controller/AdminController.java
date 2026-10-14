@@ -97,10 +97,13 @@ public class AdminController {
         SistemaTransporte sistemaActual = (SistemaTransporte) session.getAttribute(
                 SistemaTransporte.SESSION_ATTRIBUTE);
         model.addAttribute("totalUsuarios", contarUsuariosSistema(sistemaActual));
+        model.addAttribute("sistemaActual", sistemaActual);
+        model.addAttribute("esTransmilenio", sistemaActual == SistemaTransporte.TRANSMILENIO);
         model.addAttribute("esAdministradorGlobal", authentication.getAuthorities().stream()
                 .anyMatch(autoridad -> "ROLE_ADMIN".equals(autoridad.getAuthority())));
         usuarioRepository.findByCorreo(authentication.getName()).ifPresent(usuario ->
-                model.addAttribute("alertasAdmin", avisoAdministrativoService.obtenerPendientes(usuario.getId())));
+                model.addAttribute("alertasAdmin",
+                        avisoAdministrativoService.obtenerPendientes(usuario.getId(), sistemaActual)));
         model.addAttribute("alertaReturnTo", "/admin/dashboard");
         return "admin/inicio";
     }
@@ -347,11 +350,17 @@ public class AdminController {
             return ResponseEntity.badRequest().build();
         }
 
+        SistemaTransporte sistemaActual = (SistemaTransporte) session.getAttribute(
+                SistemaTransporte.SESSION_ATTRIBUTE);
+        if (sistemaActual == null || !sistemaActual.estaDisponible()) {
+            return ResponseEntity.badRequest().build();
+        }
+
         String nombrePredeterminado = switch (tipo) {
-            case "anual"   -> "Reporte_" + anio + ".xlsx";
-            case "mensual" -> "Reporte_" + anio + "-" + String.format("%02d", mes) + ".xlsx";
-            case "diario"  -> "Reporte_" + anio + "-" + String.format("%02d", mes) + "-" + String.format("%02d", dia) + ".xlsx";
-            default        -> "Reporte_Transcaribe.xlsx";
+            case "anual"   -> "Reporte_" + sistemaActual.getNombre() + "_" + anio + ".xlsx";
+            case "mensual" -> "Reporte_" + sistemaActual.getNombre() + "_" + anio + "-" + String.format("%02d", mes) + ".xlsx";
+            case "diario"  -> "Reporte_" + sistemaActual.getNombre() + "_" + anio + "-" + String.format("%02d", mes) + "-" + String.format("%02d", dia) + ".xlsx";
+            default        -> "Reporte_" + sistemaActual.getNombre() + ".xlsx";
         };
         String nombreArchivo = nombreReporte == null || nombreReporte.isBlank()
                 ? nombrePredeterminado
@@ -362,14 +371,12 @@ public class AdminController {
             nombreArchivo = nombreArchivo.substring(0, 100).replaceAll("[. ]+$", "");
         }
         if (nombreArchivo.isBlank()) {
-            nombreArchivo = "Reporte_Transcaribe";
+            nombreArchivo = "Reporte_" + sistemaActual.getNombre();
         }
         if (!nombreArchivo.toLowerCase(Locale.ROOT).endsWith(".xlsx")) {
             nombreArchivo += ".xlsx";
         }
 
-        SistemaTransporte sistemaActual = (SistemaTransporte) session.getAttribute(
-                SistemaTransporte.SESSION_ATTRIBUTE);
         StreamingResponseBody file = out -> excelService.generarReporte(
                 tipo, anio, mes, dia, incluirUsuarios, incluirTransacciones,
                 incluirRutas, incluirAvisos, sistemaActual, out);

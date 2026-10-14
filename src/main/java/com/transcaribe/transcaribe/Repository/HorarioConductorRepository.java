@@ -24,6 +24,15 @@ public interface HorarioConductorRepository extends MongoRepository<HorarioCondu
             sort = "{ 'fecha': -1, 'hora_inicio': -1 }")
     Stream<HorarioConductor> streamByFechaEnRango(LocalDate inicio, LocalDate fin);
 
+    @Query(value = "{ 'conductor_id': { '$in': ?0 } }",
+            sort = "{ 'fecha': -1, 'hora_inicio': -1 }")
+    Stream<HorarioConductor> streamByConductorIdIn(List<String> conductorIds);
+
+    @Query(value = "{ 'conductor_id': { '$in': ?0 }, 'fecha': { '$gte': ?1, '$lt': ?2 } }",
+            sort = "{ 'fecha': -1, 'hora_inicio': -1 }")
+    Stream<HorarioConductor> streamByConductorIdInAndFechaEnRango(
+            List<String> conductorIds, LocalDate inicio, LocalDate fin);
+
     Optional<HorarioConductor> findByIdAndConductorId(String id, String conductorId);
 
     List<HorarioConductor> findByBusIdAndFecha(String busId, java.time.LocalDate fecha);

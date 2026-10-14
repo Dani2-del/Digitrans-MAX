@@ -1281,6 +1281,57 @@ table.mod-table .card-btn { margin: 2px 4px; padding: 8px 12px; font-size: 0.9re
   }
 }
 .admin-empty-state { padding: 30px 12px; text-align: center; color: var(--piedra); }
+
+body[data-sistema="TRANSMILENIO"] {
+  --tinta: #8f172b;
+  --tinta-2: #681020;
+  --caribe: #c8102e;
+  --caribe-soft: #fce8eb;
+  --coral: #c8102e;
+  --coral-2: #a50f26;
+  --mango: #f2c500;
+  --mango-soft: #fff8d6;
+  --arena: #fffaf0;
+  --linea: rgba(143, 23, 43, 0.16);
+  --accent: #c8102e;
+  --accent-2: #a50f26;
+  --accent-3: #f2c500;
+  --text: #8f172b;
+  --text-light: #c8102e;
+}
+
+body[data-sistema="TRANSMILENIO"] .admin-module-card:not(:disabled):hover {
+  border-color: rgba(200, 16, 46, 0.4);
+}
+
+body[data-sistema="TRANSMILENIO"] .users-module .admin-module-icon,
+body[data-sistema="TRANSMILENIO"] .announcements-module .admin-module-icon,
+body[data-sistema="TRANSMILENIO"] .transactions-module .admin-module-icon {
+  background: #fce8eb;
+}
+
+body[data-sistema="TRANSMILENIO"] .users-module .admin-module-icon svg,
+body[data-sistema="TRANSMILENIO"] .announcements-module .admin-module-icon svg,
+body[data-sistema="TRANSMILENIO"] .transactions-module .admin-module-icon svg {
+  color: #c8102e;
+}
+
+body[data-sistema="TRANSMILENIO"] .admin-module-card.module-unavailable,
+body[data-sistema="TRANSMILENIO"] .admin-module-card.module-unavailable:hover {
+  cursor: not-allowed;
+  opacity: 0.62;
+  border-style: dashed;
+  box-shadow: none;
+  transform: none;
+}
+
+body[data-sistema="TRANSMILENIO"] .module-unavailable .admin-module-link {
+  color: #8f172b;
+  background: #fff8d6;
+  border-radius: 999px;
+  padding: 5px 10px;
+}
+
 .transaction-filters {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

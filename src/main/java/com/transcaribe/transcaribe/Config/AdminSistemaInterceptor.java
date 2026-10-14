@@ -44,12 +44,25 @@ public class AdminSistemaInterceptor implements HandlerInterceptor {
                 return false;
             }
             session.setAttribute(SistemaTransporte.SESSION_ATTRIBUTE, asignado);
-            return true;
+            return permitirHerramientasSistema(request, response, asignado);
         }
 
         Object seleccionado = session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE);
         if (!(seleccionado instanceof SistemaTransporte sistema) || !sistema.estaDisponible()) {
             response.sendRedirect(request.getContextPath() + "/admin/seleccionar-entidad");
+            return false;
+        }
+        return permitirHerramientasSistema(request, response, sistema);
+    }
+
+    private boolean permitirHerramientasSistema(HttpServletRequest request,
+                                                HttpServletResponse response,
+                                                SistemaTransporte sistema) throws java.io.IOException {
+        String ruta = request.getRequestURI().substring(request.getContextPath().length());
+        boolean herramientaEnPreparacion = ruta.startsWith("/admin/horarios")
+                || ruta.equals("/admin/mapa-rutas/editar");
+        if (sistema == SistemaTransporte.TRANSMILENIO && herramientaEnPreparacion) {
+            response.sendRedirect(request.getContextPath() + "/admin/dashboard?funcion=proximamente");
             return false;
         }
         return true;

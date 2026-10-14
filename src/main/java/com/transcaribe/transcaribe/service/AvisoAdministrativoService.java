@@ -1,6 +1,7 @@
 package com.transcaribe.transcaribe.service;
 
 import com.transcaribe.transcaribe.Model.AvisoAdministrativo;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 import com.transcaribe.transcaribe.Model.Usuario;
 import com.transcaribe.transcaribe.Repository.AvisoAdministrativoRepository;
 import com.transcaribe.transcaribe.Repository.UsuarioRepository;
@@ -25,7 +26,7 @@ public class AvisoAdministrativoService {
     private static final Pattern CORREO_VALIDO =
             Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
     private static final Set<String> ROLES_NOTIFICABLES = Set.of(
-            Usuario.ROLE_USER, Usuario.ROLE_CONDUCTOR, Usuario.ROLE_ADMIN);
+            Usuario.ROLE_USER, Usuario.ROLE_CONDUCTOR, Usuario.ROLE_ADMIN, Usuario.ROLE_MODERATOR);
 
     private final AvisoAdministrativoRepository avisoRepository;
     private final UsuarioRepository usuarioRepository;
@@ -47,6 +48,16 @@ public class AvisoAdministrativoService {
                 .toList();
     }
 
+    public List<Usuario> obtenerDestinatariosElegibles(SistemaTransporte sistema) {
+        if (sistema == null || !sistema.estaDisponible()) return List.of();
+        try (var usuarios = usuarioRepository.streamBySistemaTransporte(sistema)) {
+            return usuarios.filter(this::esDestinatarioElegible)
+                    .sorted((primero, segundo) -> nombreParaMostrar(primero)
+                            .compareToIgnoreCase(nombreParaMostrar(segundo)))
+                    .toList();
+        }
+    }
+
     public ResultadoEnvio crearAviso(String asunto, String mensaje, boolean paraTodos,
                                      List<String> rolesSeleccionados, List<String> idsSeleccionados) {
         return crearAviso(asunto, mensaje, paraTodos, rolesSeleccionados, idsSeleccionados, null);
@@ -55,6 +66,16 @@ public class AvisoAdministrativoService {
     public ResultadoEnvio crearAviso(String asunto, String mensaje, boolean paraTodos,
                                      List<String> rolesSeleccionados, List<String> idsSeleccionados,
                                      MultipartFile imagenSubida) {
+        return crearAviso(asunto, mensaje, paraTodos, rolesSeleccionados, idsSeleccionados,
+                imagenSubida, SistemaTransporte.TRANSCARIBE);
+    }
+
+    public ResultadoEnvio crearAviso(String asunto, String mensaje, boolean paraTodos,
+                                     List<String> rolesSeleccionados, List<String> idsSeleccionados,
+                                     MultipartFile imagenSubida, SistemaTransporte sistema) {
+        if (sistema == null || !sistema.estaDisponible()) {
+            throw new IllegalArgumentException("Selecciona un SITM válido para publicar el aviso.");
+        }
         String asuntoValidado = asunto == null ? "" : asunto.trim();
         String mensajeValidado = mensaje == null ? "" : mensaje.trim();
         if (!StringUtils.hasText(asuntoValidado) || asuntoValidado.length() > MAX_ASUNTO) {
@@ -67,10 +88,10 @@ public class AvisoAdministrativoService {
 
         Set<String> roles = validarRoles(rolesSeleccionados);
         List<Usuario> destinatarios = paraTodos
-                ? obtenerDestinatariosElegibles().stream()
+                ? obtenerDestinatariosElegibles(sistema).stream()
                         .filter(usuario -> roles.contains(usuario.getRole()))
                         .toList()
-                : obtenerDestinatariosSeleccionados(idsSeleccionados, roles);
+                : obtenerDestinatariosSeleccionados(idsSeleccionados, roles, sistema);
         if (destinatarios.isEmpty()) {
             throw new IllegalArgumentException("No hay cuentas activas y verificadas para los tipos seleccionados.");
         }
@@ -81,6 +102,7 @@ public class AvisoAdministrativoService {
                 .toList();
         AvisoAdministrativo nuevoAviso =
                 new AvisoAdministrativo(asuntoValidado, mensajeValidado, idsDestinatarios);
+        nuevoAviso.setSistemaTransporte(sistema);
         if (imagen != null) {
             nuevoAviso.setImagen(imagen.contenido());
             nuevoAviso.setImagenTipoContenido(imagen.tipoContenido());
@@ -99,9 +121,13 @@ public class AvisoAdministrativoService {
         return new ResultadoEnvio(aviso.getId(), destinatarios.size(), destinatariosCorreo.size());
     }
 
-    public ImagenAviso obtenerImagenParaUsuario(String avisoId, String usuarioId, boolean administrador) {
+    public ImagenAviso obtenerImagenParaUsuario(String avisoId, String usuarioId, boolean administrador,
+                                                SistemaTransporte sistema) {
         AvisoAdministrativo aviso = avisoRepository.findById(avisoId)
                 .orElseThrow(() -> new IllegalArgumentException("No se encontró el aviso solicitado."));
+        if (!perteneceAlSistema(aviso, sistema)) {
+            throw new SecurityException("El aviso pertenece a otro SITM.");
+        }
         if (!administrador && !aviso.getDestinatarios().contains(usuarioId)) {
             throw new SecurityException("El usuario no es destinatario de este aviso.");
         }
@@ -112,23 +138,62 @@ public class AvisoAdministrativoService {
     }
 
     public List<AvisoAdministrativo> obtenerPendientes(String usuarioId) {
+        if (!StringUtils.hasText(usuarioId)) return List.of();
+        Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
+        SistemaTransporte sistema = usuario == null ? null
+                : Usuario.ROLE_MODERATOR.equals(usuario.getRole())
+                    ? usuario.getSistemaAsignado() : usuario.getSitm();
+        return obtenerPendientes(usuarioId,
+                sistema == null ? SistemaTransporte.TRANSCARIBE : sistema);
+    }
+
+    public List<AvisoAdministrativo> obtenerPendientes(String usuarioId, SistemaTransporte sistema) {
         if (!StringUtils.hasText(usuarioId)) {
             return List.of();
         }
-        return avisoRepository.findPendientesParaUsuario(usuarioId);
+        if (sistema == null || !sistema.estaDisponible()) return List.of();
+        List<AvisoAdministrativo> avisos = new java.util.ArrayList<>(
+                avisoRepository.findPendientesParaUsuarioYSistema(usuarioId, sistema));
+        if (sistema == SistemaTransporte.TRANSCARIBE) {
+            avisos.addAll(avisoRepository.findPendientesLegadosParaUsuario(usuarioId));
+        }
+        return ordenarPorFechaDesc(avisos);
     }
 
     public List<AvisoAdministrativo> obtenerAvisosRecientes() {
         return avisoRepository.findTop2ByOrderByFechaCreacionDesc();
     }
 
+    public List<AvisoAdministrativo> obtenerAvisosRecientes(SistemaTransporte sistema) {
+        if (sistema == null || !sistema.estaDisponible()) return List.of();
+        List<AvisoAdministrativo> avisos = new java.util.ArrayList<>(
+                avisoRepository.findTop2BySistemaTransporteOrderByFechaCreacionDesc(sistema));
+        if (sistema == SistemaTransporte.TRANSCARIBE) {
+            avisos.addAll(avisoRepository.findTop2LegadosByOrderByFechaCreacionDesc());
+        }
+        return ordenarPorFechaDesc(avisos).stream().limit(2).toList();
+    }
+
     public List<AvisoAdministrativo> obtenerHistorialAvisos() {
         return avisoRepository.findAllByOrderByFechaCreacionDesc();
     }
 
-    public void descartarParaUsuario(String avisoId, String usuarioId) {
+    public List<AvisoAdministrativo> obtenerHistorialAvisos(SistemaTransporte sistema) {
+        if (sistema == null || !sistema.estaDisponible()) return List.of();
+        List<AvisoAdministrativo> avisos = new java.util.ArrayList<>(
+                avisoRepository.findAllBySistemaTransporteOrderByFechaCreacionDesc(sistema));
+        if (sistema == SistemaTransporte.TRANSCARIBE) {
+            avisos.addAll(avisoRepository.findAllLegadosByOrderByFechaCreacionDesc());
+        }
+        return ordenarPorFechaDesc(avisos);
+    }
+
+    public void descartarParaUsuario(String avisoId, String usuarioId, SistemaTransporte sistema) {
         AvisoAdministrativo aviso = avisoRepository.findById(avisoId)
                 .orElseThrow(() -> new IllegalArgumentException("No se encontró el aviso solicitado."));
+        if (!perteneceAlSistema(aviso, sistema)) {
+            throw new SecurityException("El aviso pertenece a otro SITM.");
+        }
         if (!aviso.getDestinatarios().contains(usuarioId)) {
             throw new SecurityException("El usuario no es destinatario de este aviso.");
         }
@@ -138,7 +203,8 @@ public class AvisoAdministrativoService {
     }
 
     private List<Usuario> obtenerDestinatariosSeleccionados(List<String> idsSeleccionados,
-                                                              Set<String> rolesSeleccionados) {
+                                                              Set<String> rolesSeleccionados,
+                                                              SistemaTransporte sistema) {
         Set<String> ids = idsSeleccionados == null
                 ? Set.of()
                 : idsSeleccionados.stream()
@@ -148,7 +214,9 @@ public class AvisoAdministrativoService {
             throw new IllegalArgumentException("Selecciona al menos un destinatario.");
         }
 
-        List<Usuario> encontrados = usuarioRepository.findAllById(ids);
+        List<Usuario> encontrados = obtenerDestinatariosElegibles(sistema).stream()
+                .filter(usuario -> ids.contains(usuario.getId()))
+                .toList();
         if (encontrados.size() != ids.size()
                 || encontrados.stream().anyMatch(u -> !esDestinatarioElegible(u)
                 || !rolesSeleccionados.contains(u.getRole()))) {
@@ -167,6 +235,23 @@ public class AvisoAdministrativoService {
             throw new IllegalArgumentException("Selecciona al menos un tipo de cuenta válido.");
         }
         return roles;
+    }
+
+    private boolean perteneceAlSistema(AvisoAdministrativo aviso, SistemaTransporte sistema) {
+        return sistema != null && sistema.estaDisponible()
+                && (aviso.getSistemaTransporte() == sistema
+                    || (sistema == SistemaTransporte.TRANSCARIBE
+                        && aviso.getSistemaTransporte() == SistemaTransporte.TRANSCARIBE));
+    }
+
+    private List<AvisoAdministrativo> ordenarPorFechaDesc(List<AvisoAdministrativo> avisos) {
+        return avisos.stream()
+                .sorted((primero, segundo) -> {
+                    if (primero.getFechaCreacion() == null) return 1;
+                    if (segundo.getFechaCreacion() == null) return -1;
+                    return segundo.getFechaCreacion().compareTo(primero.getFechaCreacion());
+                })
+                .toList();
     }
 
     private ImagenAviso validarImagen(MultipartFile imagenSubida) {

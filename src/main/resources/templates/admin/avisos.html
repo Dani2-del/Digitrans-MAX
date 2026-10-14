@@ -5,18 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Avisos y alertas - Digitrans</title>
     <link rel="stylesheet" th:href="@{/css/admin.css}">
-    <link rel="stylesheet" th:href="@{/css/avisos.css}">
+    <link rel="stylesheet" th:href="@{/css/avisos.css(v=20261014-3)}">
     <th:block th:replace="~{fragments/loading-indicator :: styles}"></th:block>
 </head>
-<body class="admin-announcements-page">
+<body class="admin-announcements-page" th:attr="data-sistema=${sistemaActual}">
 <div class="page">
     <main class="center-card wide">
         <section class="card admin-announcements">
             <header class="admin-announcements-header">
                 <div>
-                    <p class="admin-eyebrow">Digitrans · COMUNICACIONES</p>
-                    <h1>Avisos y alertas</h1>
-                    <p>Envía un correo y muestra un aviso de pantalla completa al iniciar sesión.</p>
+                    <p class="admin-eyebrow" th:text="|${sistemaActual.nombre} · COMUNICACIONES|">Transcaribe · COMUNICACIONES</p>
+                    <h1>Avisos y alertas de <span th:text="${sistemaActual.nombre}">Transcaribe</span></h1>
+                    <p>Los avisos se enviarán únicamente a cuentas de este servicio.</p>
                 </div>
                 <a class="admin-announcements-back" th:href="@{/admin/dashboard}">Volver al panel</a>
             </header>
@@ -55,6 +55,7 @@
                     <legend>Tipos de cuenta</legend>
                     <label><input type="checkbox" name="roles" value="ROLE_USER" checked> Usuarios</label>
                     <label><input type="checkbox" name="roles" value="ROLE_CONDUCTOR" checked> Conductores</label>
+                    <label><input type="checkbox" name="roles" value="ROLE_MODERATOR" checked> Moderadores</label>
                     <label><input type="checkbox" name="roles" value="ROLE_ADMIN" checked> Administradores</label>
                 </fieldset>
 

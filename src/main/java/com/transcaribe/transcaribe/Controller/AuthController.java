@@ -33,10 +33,21 @@ public class AuthController {
 
     @GetMapping("/mapa-rutas")
     public String mapaRutas(Authentication authentication, Model model, HttpSession session) {
+        boolean autenticado = authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken);
         boolean esUsuario = authentication != null
                 && authentication.isAuthenticated()
                 && authentication.getAuthorities().stream()
                         .anyMatch(authority -> "ROLE_USER".equals(authority.getAuthority()));
+        boolean esAdmin = autenticado && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+        boolean esModerador = autenticado && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_MODERATOR".equals(authority.getAuthority()));
+        if (session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE) == SistemaTransporte.TRANSMILENIO
+                && (esAdmin || esModerador)) {
+            return "redirect:/admin/dashboard";
+        }
         if (esUsuario && session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE)
                 == SistemaTransporte.TRANSMILENIO) {
             return "redirect:/menu";
@@ -44,12 +55,7 @@ public class AuthController {
 
         String menuUrl = "/";
         String menuLabel = "Volver al inicio";
-        boolean esAdmin = false;
-        if (authentication != null
-                && authentication.isAuthenticated()
-                && !(authentication instanceof AnonymousAuthenticationToken)) {
-            esAdmin = authentication.getAuthorities().stream()
-                    .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+        if (autenticado) {
             boolean esConductor = authentication.getAuthorities().stream()
                     .anyMatch(authority -> "ROLE_CONDUCTOR".equals(authority.getAuthority()));
             menuUrl = esAdmin ? "/admin/dashboard" : esConductor ? "/conductor/panel" : "/menu";
