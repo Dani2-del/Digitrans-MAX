@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Chat operativo - Digitrans</title>
     <link rel="stylesheet" th:if="${rolParticipante == 'ROLE_CONDUCTOR'}" th:href="@{/css/conductor.css}">
-    <link rel="stylesheet" th:href="@{/css/chat.css}">
+    <link rel="stylesheet" th:href="@{/css/chat.css(v=20261015-2)}">
 </head>
-<body>
+<body th:attr="data-sistema=${sistemaActual}">
 <header class="navbar conductor-navbar chat-driver-navbar" th:if="${rolParticipante == 'ROLE_CONDUCTOR'}">
     <a class="conductor-navbar-brand" th:href="@{/conductor/panel}">
         <img src="/images/digitrans-mark.svg" alt="" class="logo">

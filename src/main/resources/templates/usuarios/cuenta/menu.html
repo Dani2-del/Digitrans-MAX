@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color"
-        th:content="${esTransmilenio ? '#C8102E' : '#0F3948'}" />
+        th:content="${esTransmilenio ? '#C8102E' : (esTransmetro ? '#12A842' : '#0F3948')}" />
   <title>Mi espacio - Digitrans</title>
-  <link rel="stylesheet" th:href="@{/css/usuario.css(v=20261014-7)}" />
-  <link rel="stylesheet" th:href="@{/css/avisos.css(v=20261014-3)}" />
+  <link rel="stylesheet" th:href="@{/css/usuario.css(v=20261015-5)}" />
+  <link rel="stylesheet" th:href="@{/css/avisos.css(v=20261015-2)}" />
     <th:block th:replace="~{fragments/loading-indicator :: styles}"></th:block>
 </head>
 <body class="menu-page" th:attr="data-sistema=${sistemaActual}">
@@ -117,9 +117,9 @@
           </a>
 
           <a class="dashboard-action action-routes"
-             th:href="${esTransmilenio ? null : '/rutas'}"
-             th:classappend="${esTransmilenio ? 'is-disabled' : ''}"
-             th:attr="aria-disabled=${esTransmilenio}, tabindex=${esTransmilenio ? -1 : 0}">
+             th:href="${tieneRutasConfiguradas ? '/rutas' : null}"
+             th:classappend="${!tieneRutasConfiguradas ? 'is-disabled' : ''}"
+             th:attr="aria-disabled=${!tieneRutasConfiguradas}, tabindex=${!tieneRutasConfiguradas ? -1 : 0}">
             <span class="action-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none">
                 <path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
@@ -128,17 +128,17 @@
             </span>
             <span class="action-copy">
               <strong>Rutas favoritas</strong>
-              <small th:text="${esTransmilenio ? 'No disponible para TransMilenio por ahora' : 'Elige rutas y horarios de aviso'}">Elige rutas y horarios de aviso</small>
+              <small th:text="${!tieneRutasConfiguradas ? 'Próximamente para ' + sistemaActual.nombre : 'Elige rutas y horarios de aviso'}">Elige rutas y horarios de aviso</small>
             </span>
-            <svg th:unless="${esTransmilenio}" class="action-arrow" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <svg th:if="${tieneRutasConfiguradas}" class="action-arrow" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path d="M4 10h11m-4-4 4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </a>
 
           <a class="dashboard-action action-routes"
-             th:href="${esTransmilenio ? null : '/mapa-rutas'}"
-             th:classappend="${esTransmilenio ? 'is-disabled' : ''}"
-             th:attr="aria-disabled=${esTransmilenio}, tabindex=${esTransmilenio ? -1 : 0}">
+             th:href="${tieneRutasConfiguradas ? '/mapa-rutas' : null}"
+             th:classappend="${!tieneRutasConfiguradas ? 'is-disabled' : ''}"
+             th:attr="aria-disabled=${!tieneRutasConfiguradas}, tabindex=${!tieneRutasConfiguradas ? -1 : 0}">
             <span class="action-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none">
                 <path d="m3 6.5 5.5-2.5 7 2.5L21 4v13.5L15.5 20l-7-2.5L3 20V6.5Z"
@@ -150,9 +150,9 @@
             </span>
             <span class="action-copy">
               <strong>Mapa interactivo (BETA)</strong>
-              <small th:text="${esTransmilenio ? 'No disponible para TransMilenio por ahora' : 'Explora rutas y paradas en el mapa'}">Explora rutas y paradas en el mapa</small>
+              <small th:text="${!tieneRutasConfiguradas ? 'Próximamente para ' + sistemaActual.nombre : 'Explora rutas y paradas en el mapa'}">Explora rutas y paradas en el mapa</small>
             </span>
-            <svg th:unless="${esTransmilenio}" class="action-arrow" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <svg th:if="${tieneRutasConfiguradas}" class="action-arrow" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path d="M4 10h11m-4-4 4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </a>
@@ -188,23 +188,27 @@
         <div class="ride-intro">
           <span class="ride-icon" aria-hidden="true">
             <svg viewBox="0 0 48 48" fill="none">
-              <path d="M9 31V15c0-4 3-6 7-6h16c4 0 7 2 7 6v16H9Z" fill="#FF5500" stroke="#B85B16" stroke-width="1.8" stroke-linejoin="round"/>
-              <path d="M13 15h22v7H13z" fill="#BCEEF2"/>
-              <path d="M9 25h30M14 31v5m20-5v5M12 36h24" stroke="#B85B16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M10 28h28v3H10z" fill="#E85A0B"/>
+              <path class="ride-bus-body" d="M9 31V15c0-4 3-6 7-6h16c4 0 7 2 7 6v16H9Z" fill="#FF5500" stroke="#B85B16" stroke-width="1.8" stroke-linejoin="round"/>
+              <path class="ride-bus-window" d="M13 15h22v7H13z" fill="#BCEEF2"/>
+              <path class="ride-bus-detail" d="M9 25h30M14 31v5m20-5v5M12 36h24" stroke="#B85B16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path class="ride-bus-trim" d="M10 28h28v3H10z" fill="#E85A0B"/>
               <path d="M15 26h.1M33 26h.1" stroke="#FFF4D8" stroke-width="3.2" stroke-linecap="round"/>
-              <circle cx="16" cy="36" r="3.2" fill="#0F3948"/>
-              <circle cx="32" cy="36" r="3.2" fill="#0F3948"/>
-              <path d="M20 12h8" stroke="#B85B16" stroke-width="1.5" stroke-linecap="round"/>
+              <circle class="ride-bus-wheel" cx="16" cy="36" r="3.2" fill="#0F3948"/>
+              <circle class="ride-bus-wheel" cx="32" cy="36" r="3.2" fill="#0F3948"/>
+              <path class="ride-bus-detail" d="M20 12h8" stroke="#B85B16" stroke-width="1.5" stroke-linecap="round"/>
             </svg>
           </span>
           <div>
-            <span class="dashboard-eyebrow">¿LISTO PARA VIAJAR?</span>
-            <h2>Simula tu viaje</h2>
-            <p>Selecciona tu tarjeta para simular el pago de un pasaje.</p>
+            <span class="dashboard-eyebrow" th:text="${permiteSimularViaje ? '¿LISTO PARA VIAJAR?' : 'SERVICIO EN PREPARACIÓN'}">¿LISTO PARA VIAJAR?</span>
+            <h2 th:text="${permiteSimularViaje ? 'Simula tu viaje' : 'Viajes en bus próximamente'}">Simula tu viaje</h2>
+            <p th:text="${permiteSimularViaje ? (esTransmilenio ? 'Elige tu tarjeta; al confirmar, se asignará una ruta troncal al azar.' : 'Selecciona tu tarjeta para simular el pago de un pasaje.') : 'Las operaciones de buses estarán disponibles próximamente para ' + sistemaActual.nombre + '.'}">Selecciona tu tarjeta para simular el pago de un pasaje.</p>
           </div>
         </div>
-        <form th:action="@{/api/buses/simular-viaje}" method="post" class="ride-form">
+        <div th:unless="${permiteSimularViaje}" class="ride-coming-soon">
+          <strong>Operaciones de buses</strong>
+          <span>Próximamente para <b th:text="${sistemaActual.nombre}">Transmetro</b></span>
+        </div>
+        <form th:if="${permiteSimularViaje}" th:action="@{/api/buses/simular-viaje}" method="post" class="ride-form">
           <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
           <input type="hidden" name="usuarioId" th:value="${usuario.id}" />
           <label for="rideCard">Tarjeta Digitrans</label>
@@ -215,12 +219,12 @@
                     th:text="${t.numeroTarjeta + ' · Saldo $' + #numbers.formatDecimal(t.saldo, 0, 'COMMA', 0, 'POINT')}">
             </option>
           </select>
-          <button type="submit" class="ride-submit"
-                  onclick="return confirm('¿Confirmas la simulación del viaje por $3.900?')">
+          <button type="submit" class="ride-submit" th:attr="data-fare=${valorPasaje}"
+                  onclick="return confirm('¿Confirmas la simulación del viaje por $' + new Intl.NumberFormat('es-CO').format(Number(this.dataset.fare)) + '?')">
             <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path d="M2.5 10h13m-4.5-4.5L15.5 10 11 14.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Simular viaje · $3.900
+            Simular viaje · $<span th:text="${#numbers.formatDecimal(valorPasaje, 0, 'POINT', 0, 'COMMA')}">3.550</span>
           </button>
         </form>
       </section>

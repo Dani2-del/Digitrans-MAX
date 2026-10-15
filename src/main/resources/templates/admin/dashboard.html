@@ -5,11 +5,11 @@
     <title>Gestión de usuarios - Digitrans</title>
     <meta name="_csrf" th:content="${_csrf?.token}"/>
     <meta name="_csrf_header" th:content="${_csrf?.headerName}"/>
-    <link rel="stylesheet" th:href="@{/css/admin.css}" />
+    <link rel="stylesheet" th:href="@{/css/admin.css(v=20261015-2)}" />
     <th:block th:replace="~{fragments/loading-indicator :: styles}"></th:block>
 </head>
 
-<body>
+<body th:attr="data-sistema=${sistemaActual}">
 <div class="page">
     <div class="center-card wide">
         <div class="card">
@@ -114,7 +114,7 @@
                         </td>
                         <td class="saldo-display">$0</td>
                         <td>
-                            <button class="card-btn" th:attr="data-id=${u.id}" onclick="openChargeModal(this)">Cobrar</button>
+                            <button th:if="${tieneRutasConfiguradas}" class="card-btn" th:attr="data-id=${u.id}" onclick="openChargeModal(this)">Cobrar</button>
                             <button class="card-btn"
                                     th:attr="data-id=${u.id}, data-nombre=${u.nombre}, data-correo=${u.correo}, data-role=${u.role}, data-sistema-asignado=${u.sistemaAsignado}"
                                     onclick="openEditModal(this)">Editar</button>

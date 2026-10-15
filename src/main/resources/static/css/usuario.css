@@ -1706,6 +1706,96 @@ body[data-sistema="TRANSMILENIO"] .ride-intro .dashboard-eyebrow {
   color: var(--coral-2);
 }
 
+body[data-sistema="TRANSMETRO"] {
+  --tinta: #174b2c;
+  --tinta-2: #103a20;
+  --caribe: #12a842;
+  --caribe-soft: #e7f7e9;
+  --coral: #12a842;
+  --coral-2: #087a2e;
+  --mango: #c5ed36;
+  --mango-soft: #f5fbdc;
+  --arena: #f5f8f1;
+  --linea: rgba(18, 168, 66, 0.18);
+}
+
+body[data-sistema="TRANSMETRO"] .navbar {
+  background: linear-gradient(110deg, #087a2e, #12a842) !important;
+  border-bottom: 3px solid #c5ed36;
+  box-shadow: 0 6px 18px rgba(23, 75, 44, .24);
+}
+body[data-sistema="TRANSMETRO"] .navbar .brand h1,
+body[data-sistema="TRANSMETRO"] .navbar-right .nav-link,
+body[data-sistema="TRANSMETRO"] .sub-links a { color: #fff; }
+body.menu-page[data-sistema="TRANSMETRO"] .dashboard-welcome {
+  background: linear-gradient(118deg, #087a2e, #19bd4d) !important;
+  background-image: linear-gradient(118deg, #087a2e, #19bd4d) !important;
+  box-shadow: 0 18px 42px rgba(23, 75, 44, .22);
+}
+body.menu-page[data-sistema="TRANSMETRO"] .dashboard-welcome::before,
+body.menu-page[data-sistema="TRANSMETRO"] .dashboard-welcome::after { border-color: rgba(197, 237, 54, .55); }
+body[data-sistema="TRANSMETRO"] .dashboard-welcome .dashboard-eyebrow,
+body[data-sistema="TRANSMETRO"] .dashboard-welcome .welcome-mark,
+body[data-sistema="TRANSMETRO"] .dashboard-welcome h1 { color: #d5f65b; }
+body[data-sistema="TRANSMETRO"] .dashboard-welcome p { color: #f5fbdc; }
+body[data-sistema="TRANSMETRO"] .primary,
+body[data-sistema="TRANSMETRO"] .btn-recargar,
+body[data-sistema="TRANSMETRO"] .bus-btn { background: #12a842 !important; }
+body[data-sistema="TRANSMETRO"] .primary:hover,
+body[data-sistema="TRANSMETRO"] .btn-recargar:hover,
+body[data-sistema="TRANSMETRO"] .bus-btn:hover { background: #087a2e !important; }
+body[data-sistema="TRANSMETRO"] .dashboard-action.is-disabled,
+body[data-sistema="TRANSMETRO"] .dashboard-action.is-disabled:hover { cursor: not-allowed; opacity: .6; }
+
+body[data-sistema="TRANSMETRO"] .action-recharge,
+body[data-sistema="TRANSMETRO"] .action-cards,
+body[data-sistema="TRANSMETRO"] .action-history,
+body[data-sistema="TRANSMETRO"] .action-routes,
+body[data-sistema="TRANSMETRO"] .action-profile,
+body[data-sistema="TRANSMETRO"] .action-alerts {
+  --action-color: #0b9b3b;
+  --action-tint: #e7f7e9;
+}
+
+body[data-sistema="TRANSMETRO"] .dashboard-summary {
+  border-color: rgba(18, 168, 66, .25);
+  background: linear-gradient(105deg, #fff 40%, #f2fbf2);
+  box-shadow: 0 10px 28px rgba(18, 120, 48, .08);
+}
+body[data-sistema="TRANSMETRO"] .summary-orbit { border-color: rgba(18, 168, 66, .16); }
+body[data-sistema="TRANSMETRO"] .dashboard-ride {
+  border-color: rgba(18, 168, 66, .3);
+  background: linear-gradient(115deg, #edf9ee, #fff 68%);
+  box-shadow: 0 8px 24px rgba(18, 120, 48, .08);
+}
+body[data-sistema="TRANSMETRO"] .ride-icon {
+  color: #087a2e;
+  background: #e0f5e3;
+  box-shadow: inset 0 0 0 1px rgba(18, 168, 66, .22);
+}
+body[data-sistema="TRANSMETRO"] .ride-icon .ride-bus-body { fill: #19bd4d; stroke: #087a2e; }
+body[data-sistema="TRANSMETRO"] .ride-icon .ride-bus-window { fill: #d8f4df; }
+body[data-sistema="TRANSMETRO"] .ride-icon .ride-bus-trim { fill: #087a2e; }
+body[data-sistema="TRANSMETRO"] .ride-icon .ride-bus-detail { stroke: #087a2e; }
+body[data-sistema="TRANSMETRO"] .ride-icon .ride-bus-wheel { fill: #174b2c; }
+body[data-sistema="TRANSMETRO"] .ride-intro .dashboard-eyebrow { color: #087a2e; }
+body[data-sistema="TRANSMETRO"] .ride-submit { background: #12a842; box-shadow: 0 7px 17px rgba(18, 168, 66, .22); }
+body[data-sistema="TRANSMETRO"] .ride-submit:hover { background: #087a2e; box-shadow: 0 11px 22px rgba(18, 168, 66, .3); }
+body[data-sistema="TRANSMETRO"] .ride-coming-soon {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  min-height: 96px;
+  padding: 16px 20px;
+  border: 1px dashed rgba(18, 168, 66, .35);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .72);
+  color: var(--piedra);
+}
+body[data-sistema="TRANSMETRO"] .ride-coming-soon strong { color: #087a2e; }
+body[data-sistema="TRANSMETRO"] .ride-coming-soon span { color: #087a2e; font-weight: 700; }
+
 .dashboard-ride {
   position: relative;
   display: grid;

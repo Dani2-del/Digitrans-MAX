@@ -61,7 +61,7 @@ public class AdminSistemaInterceptor implements HandlerInterceptor {
         String ruta = request.getRequestURI().substring(request.getContextPath().length());
         boolean herramientaEnPreparacion = ruta.startsWith("/admin/horarios")
                 || ruta.equals("/admin/mapa-rutas/editar");
-        if (sistema == SistemaTransporte.TRANSMILENIO && herramientaEnPreparacion) {
+        if (!sistema.tieneRutasConfiguradas() && herramientaEnPreparacion) {
             response.sendRedirect(request.getContextPath() + "/admin/dashboard?funcion=proximamente");
             return false;
         }

@@ -458,6 +458,24 @@ body.admin-announcements-page[data-sistema="TRANSMILENIO"] .announcement-history
     color: #fff;
 }
 
+body[data-sistema="TRANSMETRO"] .admin-alert-card { border-top-color: #12a842; }
+body[data-sistema="TRANSMETRO"] .admin-alert-label,
+body.admin-announcements-page[data-sistema="TRANSMETRO"] .admin-announcements-back { color: #174b2c; }
+body[data-sistema="TRANSMETRO"] .admin-alert-close,
+body.admin-announcements-page[data-sistema="TRANSMETRO"] .announcement-submit {
+    background: linear-gradient(120deg, #087a2e, #12a842);
+}
+body[data-sistema="TRANSMETRO"] .admin-alert-close:hover { box-shadow: 0 8px 20px rgba(18, 168, 66, .28); }
+body.admin-announcements-page[data-sistema="TRANSMETRO"] .announcement-role-filters input,
+body.admin-announcements-page[data-sistema="TRANSMETRO"] .announcement-radio input,
+body.admin-announcements-page[data-sistema="TRANSMETRO"] .announcement-recipient input { accent-color: #12a842; }
+body.admin-announcements-page[data-sistema="TRANSMETRO"] .announcement-submit:hover,
+body.admin-announcements-page[data-sistema="TRANSMETRO"] .announcement-history-link:hover { background: #087a2e; }
+body.admin-announcements-page[data-sistema="TRANSMETRO"] .announcement-history-link {
+    border-color: #12a842; background: #e7f7e9; color: #174b2c;
+}
+body.admin-announcements-page[data-sistema="TRANSMETRO"] .announcement-history-link:hover { color: #fff; }
+
 .announcement-history-item > span,
 .announcement-history-meta {
     flex: 0 0 auto;

@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import com.transcaribe.transcaribe.Model.RutaTransmilenio;
 
 @Service 
 public class BusService {
@@ -99,6 +100,40 @@ public class BusService {
         return "Saldo insuficiente en la tarjeta " + numeroTarjeta;
     }
 }
+
+    public String simularViajeTransmilenio(String usuarioId, String numeroTarjeta,
+                                           RutaTransmilenio ruta) {
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        if (!usuario.isActivo()) return "La cuenta está inactiva.";
+
+        BigDecimal costo = BigDecimal.valueOf(
+                TarifaTranscaribe.paraSistema(SistemaTransporte.TRANSMILENIO));
+        Tarjeta tarjeta = usuario.getTarjetas().stream()
+                .filter(t -> numeroTarjeta.equals(t.getNumeroTarjeta()))
+                .filter(t -> t.getSistemaTransporte() == SistemaTransporte.TRANSMILENIO)
+                .findFirst()
+                .orElse(null);
+        if (tarjeta == null) return "La tarjeta seleccionada no es válida para TransMilenio.";
+        if (tarjeta.getSaldo() == null || tarjeta.getSaldo().compareTo(costo) < 0) {
+            return "Saldo insuficiente en la tarjeta " + numeroTarjeta;
+        }
+
+        BigDecimal nuevoSaldo = tarjeta.getSaldo().subtract(costo);
+        tarjeta.setSaldo(nuevoSaldo);
+        usuarioRepository.save(usuario);
+
+        Transaccion transaccion = new Transaccion(costo.doubleValue(), LocalDateTime.now(),
+                "PASAJE [" + numeroTarjeta + "] - TransMilenio " + ruta.getCodigoLinea()
+                        + " (" + ruta.getOrigen() + " → " + ruta.getDestino() + ")", usuario);
+        transaccion.setSistemaTransporte(SistemaTransporte.TRANSMILENIO);
+        transaccion.setTarjetaTranscaribe(numeroTarjeta);
+        transaccionRepository.save(transaccion);
+
+        return "Cobro exitoso. Ruta " + ruta.getCodigoLinea() + ": " + ruta.getOrigen()
+                + " → " + ruta.getDestino() + ". Saldo restante: $" + nuevoSaldo;
+    }
+
     public List<String> obtenerTodasLasRutas() {
         return busRepository.findAll().stream()
                 .filter(Bus::isActivo)

@@ -71,6 +71,7 @@ public class ConductorController {
         SistemaTransporte sistemaAvisos = esModerador ? usuario.getSistemaAsignado()
                 : esAdmin && session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE) instanceof SistemaTransporte sistema
                     ? sistema : usuario.getSitm();
+        model.addAttribute("sistemaActual", sistemaAvisos);
         model.addAttribute("alertasAdmin", avisoAdministrativoService.obtenerPendientes(usuario.getId(),
                 sistemaAvisos == null ? SistemaTransporte.TRANSCARIBE : sistemaAvisos));
         model.addAttribute("alertaReturnTo", "/choose-view");

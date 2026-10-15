@@ -36,21 +36,12 @@ public class AuthController {
         boolean autenticado = authentication != null
                 && authentication.isAuthenticated()
                 && !(authentication instanceof AnonymousAuthenticationToken);
-        boolean esUsuario = authentication != null
-                && authentication.isAuthenticated()
-                && authentication.getAuthorities().stream()
-                        .anyMatch(authority -> "ROLE_USER".equals(authority.getAuthority()));
         boolean esAdmin = autenticado && authentication.getAuthorities().stream()
                 .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
         boolean esModerador = autenticado && authentication.getAuthorities().stream()
                 .anyMatch(authority -> "ROLE_MODERATOR".equals(authority.getAuthority()));
-        if (session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE) == SistemaTransporte.TRANSMILENIO
-                && (esAdmin || esModerador)) {
-            return "redirect:/admin/dashboard";
-        }
-        if (esUsuario && session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE)
-                == SistemaTransporte.TRANSMILENIO) {
-            return "redirect:/menu";
+        if (autenticado && !tieneRutasConfiguradas(session)) {
+            return esAdmin || esModerador ? "redirect:/admin/dashboard" : "redirect:/menu";
         }
 
         String menuUrl = "/";
@@ -65,6 +56,11 @@ public class AuthController {
         model.addAttribute("menuUrl", menuUrl);
         model.addAttribute("menuLabel", menuLabel);
         return "mapa-rutas";
+    }
+
+    private boolean tieneRutasConfiguradas(HttpSession session) {
+        return session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE)
+                == SistemaTransporte.TRANSCARIBE;
     }
 
     @GetMapping("/registro")

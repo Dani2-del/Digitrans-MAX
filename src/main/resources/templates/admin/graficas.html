@@ -6,11 +6,11 @@
     <meta name="_csrf_header" th:content="${_csrf?.headerName}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Estadísticas - Digitrans</title>
-    <link rel="stylesheet" th:href="@{/css/admin.css}">
-    <link rel="stylesheet" th:href="@{/css/avisos.css}">
+    <link rel="stylesheet" th:href="@{/css/admin.css(v=20261015-2)}">
+    <link rel="stylesheet" th:href="@{/css/avisos.css(v=20261015-2)}">
     <th:block th:replace="~{fragments/loading-indicator :: styles}"></th:block>
 </head>
-<body>
+<body th:attr="data-sistema=${sistemaActual}">
 <div class="page">
     <main class="center-card wide">
         <section class="card admin-home analytics-home">

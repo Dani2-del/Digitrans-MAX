@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-  <link rel="stylesheet" th:href="@{/css/usuario.css}" />
-    <link rel="stylesheet" th:href="@{/css/avisos.css}" />
+  <link rel="stylesheet" th:href="@{/css/usuario.css(v=20261015-2)}" />
+    <link rel="stylesheet" th:href="@{/css/avisos.css(v=20261015-2)}" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Seleccionar Vista - Digitrans</title>
     <th:block th:replace="~{fragments/loading-indicator :: styles}"></th:block>
 </head>
-<body>
+<body th:attr="data-sistema=${sistemaActual}">
     <div class="page">
         <div class="center-card">
             <h1>Bienvenido, <span th:text="${nombre}"></span></h1>

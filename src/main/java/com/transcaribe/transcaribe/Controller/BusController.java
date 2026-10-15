@@ -3,8 +3,11 @@ package com.transcaribe.transcaribe.Controller;
 import com.transcaribe.transcaribe.Model.Usuario;
 import com.transcaribe.transcaribe.Model.Tarjeta;
 import com.transcaribe.transcaribe.Model.SistemaTransporte;
+import com.transcaribe.transcaribe.Model.RutaTransmilenio;
 import com.transcaribe.transcaribe.Repository.BusRepository;
+import com.transcaribe.transcaribe.Repository.UsuarioRepository;
 import com.transcaribe.transcaribe.service.BusService;
+import com.transcaribe.transcaribe.service.CatalogoRutasTransmilenioService;
 import com.transcaribe.transcaribe.service.ServiceTranscaribe;
 import com.transcaribe.transcaribe.service.EmailService;
 import com.transcaribe.transcaribe.Util.TarifaTranscaribe;
@@ -12,6 +15,7 @@ import com.transcaribe.transcaribe.Util.TarifaTranscaribe;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import jakarta.servlet.http.HttpSession;
@@ -28,6 +32,12 @@ public class BusController {
 
     @Autowired
     private BusRepository busRepository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private CatalogoRutasTransmilenioService catalogoRutasTransmilenioService;
 
     @Autowired
     private EmailService emailService;
@@ -95,7 +105,7 @@ public class BusController {
         return ResponseEntity.ok("Bus de prueba creado exitosamente con sus rutas originales");
     }
     @PostMapping("/simular-viaje")
-    public String simularViaje(@RequestParam String usuarioId, 
+    public String simularViaje(@RequestParam String usuarioId,
                                @RequestParam String numeroTarjeta, 
                                RedirectAttributes redirectAttributes,
                                HttpSession session) {
@@ -105,19 +115,33 @@ public class BusController {
             if (sistema == null) {
                 return "redirect:/menu";
             }
-            if (sistema != SistemaTransporte.TRANSCARIBE) {
+            if (sistema != SistemaTransporte.TRANSCARIBE
+                    && sistema != SistemaTransporte.TRANSMILENIO) {
                 redirectAttributes.addFlashAttribute("error",
                         "Las operaciones de buses están disponibles por ahora solo para Transcaribe.");
                 return "redirect:/menu";
             }
-            var buses = busRepository.findAll();
-            if (buses.isEmpty()) {
-                redirectAttributes.addFlashAttribute("error", "No hay buses configurados. Ejecuta el setup primero.");
-                return "redirect:/menu";
+            usuarioId = usuarioRepository.findByCorreo(
+                    SecurityContextHolder.getContext().getAuthentication().getName())
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado")).getId();
+            String resultado;
+            if (sistema == SistemaTransporte.TRANSMILENIO) {
+                RutaTransmilenio ruta = catalogoRutasTransmilenioService.obtenerRutaAleatoria().orElse(null);
+                if (ruta == null) {
+                    redirectAttributes.addFlashAttribute("error", "No hay rutas activas de TransMilenio configuradas.");
+                    return "redirect:/menu";
+                }
+                resultado = busService.simularViajeTransmilenio(usuarioId, numeroTarjeta, ruta);
+            } else {
+                var buses = busRepository.findAll();
+                if (buses.isEmpty()) {
+                    redirectAttributes.addFlashAttribute("error", "No hay buses configurados. Ejecuta el setup primero.");
+                    return "redirect:/menu";
+                }
+                String busId = buses.get(0).getId();
+                resultado = busService.pagarPasajeConTarjetaEspecifica(
+                        usuarioId, busId, numeroTarjeta, sistema);
             }
-            String busId = buses.get(0).getId(); 
-            String resultado = busService.pagarPasajeConTarjetaEspecifica(
-                    usuarioId, busId, numeroTarjeta, sistema);
 
             if (resultado.contains("Cobro exitoso")) {
                 try {

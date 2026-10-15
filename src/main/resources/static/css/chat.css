@@ -12,6 +12,22 @@
     background: #fbf7ee;
 }
 
+body[data-sistema="TRANSMETRO"] {
+    --chat-ink: #174b2c;
+    --chat-orange: #12a842;
+    --chat-orange-dark: #087a2e;
+    --chat-orange-soft: #e7f7e9;
+    --chat-mango-soft: #f5fbdc;
+    --chat-line: rgba(18, 168, 66, .18);
+}
+
+body[data-sistema="TRANSMETRO"] .conductor-navbar {
+    background: linear-gradient(110deg, #087a2e, #12a842);
+    border-bottom-color: #c5ed36;
+}
+body[data-sistema="TRANSMETRO"] .conductor-navbar-actions a,
+body[data-sistema="TRANSMETRO"] .conductor-navbar-actions button { background: rgba(255, 255, 255, .14); }
+
 * { box-sizing: border-box; }
 
 body {

@@ -20,10 +20,18 @@ public enum SistemaTransporte {
     }
 
     public static List<SistemaTransporte> disponibles() {
-        return List.of(TRANSCARIBE, TRANSMILENIO);
+        return List.of(TRANSCARIBE, TRANSMILENIO, TRANSMETRO);
     }
 
     public boolean estaDisponible() {
+        return true;
+    }
+
+    public boolean tieneRutasConfiguradas() {
+        return this == TRANSCARIBE;
+    }
+
+    public boolean permiteSimularViaje() {
         return this == TRANSCARIBE || this == TRANSMILENIO;
     }
 }

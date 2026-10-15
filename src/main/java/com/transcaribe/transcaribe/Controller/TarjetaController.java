@@ -50,6 +50,7 @@ public class TarjetaController {
         if (sistema instanceof SistemaTransporte sistemaActual && sistemaActual.estaDisponible()) {
             model.addAttribute("sistemaActual", sistemaActual);
             model.addAttribute("esTransmilenio", sistemaActual == SistemaTransporte.TRANSMILENIO);
+            model.addAttribute("esTransmetro", sistemaActual == SistemaTransporte.TRANSMETRO);
         }
     }
 
@@ -112,6 +113,11 @@ public class TarjetaController {
         }
 
         boolean recargaRapida = "RAPIDA".equalsIgnoreCase(modoRecarga);
+        if (recargaRapida && sistema == SistemaTransporte.TRANSMETRO) {
+            model.addAttribute("error", "La recarga por cantidad de pasajes estará disponible cuando configuremos la tarifa de Transmetro.");
+            prepararFormularioRecarga(model, usuario, sistema, "NORMAL", cantidadPasajes, monto);
+            return "usuarios/tarjetas/recarga";
+        }
         if (!recargaRapida && !"NORMAL".equalsIgnoreCase(modoRecarga)) {
             model.addAttribute("error", "Selecciona un tipo de recarga válido.");
             prepararFormularioRecarga(model, usuario, sistema, modoRecarga, cantidadPasajes, monto);
@@ -207,7 +213,11 @@ public class TarjetaController {
             model.addAttribute("tarjetas", obtenerTarjetasDelSistema(usuario, sistema));
         }
         model.addAttribute("sistemaActual", sistema);
-        model.addAttribute("valorPasaje", TarifaTranscaribe.paraSistema(sistema));
+        boolean esTransmetro = sistema == SistemaTransporte.TRANSMETRO;
+        model.addAttribute("esTransmetro", esTransmetro);
+        if (!esTransmetro) {
+            model.addAttribute("valorPasaje", TarifaTranscaribe.paraSistema(sistema));
+        }
     }
 
     /**

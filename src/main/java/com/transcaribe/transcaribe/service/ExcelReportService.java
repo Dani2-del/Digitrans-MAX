@@ -59,7 +59,7 @@ public class ExcelReportService {
         if (sistemaTransporte != null && !sistemaTransporte.estaDisponible()) {
             throw new IllegalArgumentException("El servicio del reporte no está disponible.");
         }
-        if (sistemaTransporte == SistemaTransporte.TRANSMILENIO && incluirRutas) {
+        if (sistemaTransporte != null && !sistemaTransporte.tieneRutasConfiguradas() && incluirRutas) {
             throw new IllegalArgumentException("El historial de rutas de conductores está disponible solo para Transcaribe.");
         }
         SXSSFWorkbook workbook = new SXSSFWorkbook(100);

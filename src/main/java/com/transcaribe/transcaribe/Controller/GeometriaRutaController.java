@@ -26,7 +26,7 @@ public class GeometriaRutaController {
     @GetMapping("/rutas/{codigoRuta}")
     public List<GeometriaRuta> obtenerGeometrias(
             @PathVariable String codigoRuta, HttpSession session) {
-        if (session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE) == SistemaTransporte.TRANSMILENIO) {
+        if (session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE) != SistemaTransporte.TRANSCARIBE) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         return geometriaRutaService.buscarPorRuta(codigoRuta);

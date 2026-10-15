@@ -6,8 +6,8 @@
     <meta name="_csrf_header" th:content="${_csrf?.headerName}"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Panel administrador - Digitrans</title>
-    <link rel="stylesheet" th:href="@{/css/admin.css(v=20261014-2)}">
-    <link rel="stylesheet" th:href="@{/css/avisos.css(v=20261014-3)}">
+    <link rel="stylesheet" th:href="@{/css/admin.css(v=20261015-2)}">
+    <link rel="stylesheet" th:href="@{/css/avisos.css(v=20261015-2)}">
     <th:block th:replace="~{fragments/loading-indicator :: styles}"></th:block>
 </head>
 <body th:attr="data-sistema=${sistemaActual}">
@@ -54,16 +54,16 @@
                 </a>
 
                 <a class="admin-module-card schedules-module"
-                   th:href="${esTransmilenio ? null : '/admin/horarios'}"
-                   th:classappend="${esTransmilenio ? ' module-unavailable' : ''}"
-                   th:attr="aria-disabled=${esTransmilenio}, tabindex=${esTransmilenio ? -1 : 0}"
-                   th:title="${esTransmilenio ? 'Próximamente para TransMilenio' : ''}">
+                   th:href="${tieneRutasConfiguradas ? '/admin/horarios' : null}"
+                   th:classappend="${!tieneRutasConfiguradas ? ' module-unavailable' : ''}"
+                   th:attr="aria-disabled=${!tieneRutasConfiguradas}, tabindex=${!tieneRutasConfiguradas ? -1 : 0}"
+                   th:title="${!tieneRutasConfiguradas ? 'Próximamente para ' + sistemaActual.nombre : ''}">
                     <span class="admin-module-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24"><path d="M5 17h14l1-8a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3l1 8Z"/><path d="M5 12h14M7 17v2m10-2v2"/><circle cx="8" cy="14.5" r=".75"/><circle cx="16" cy="14.5" r=".75"/></svg>
                     </span>
                     <span class="admin-module-title">Horarios de conductores</span>
                     <span class="admin-module-description">Programa rutas y consulta horarios.</span>
-                    <span class="admin-module-link" th:text="${esTransmilenio ? 'Próximamente' : 'Abrir sección →'}">Abrir sección →</span>
+                    <span class="admin-module-link" th:text="${!tieneRutasConfiguradas ? 'Próximamente' : 'Abrir sección →'}">Abrir sección →</span>
                 </a>
 
                 <a class="admin-module-card announcements-module" href="/admin/avisos">
@@ -85,16 +85,16 @@
                 </a>
 
                 <a class="admin-module-card route-map-module"
-                   th:href="${esTransmilenio ? null : '/mapa-rutas'}"
-                   th:classappend="${esTransmilenio ? ' module-unavailable' : ''}"
-                   th:attr="aria-disabled=${esTransmilenio}, tabindex=${esTransmilenio ? -1 : 0}"
-                   th:title="${esTransmilenio ? 'Próximamente para TransMilenio' : ''}">
+                   th:href="${tieneRutasConfiguradas ? '/mapa-rutas' : null}"
+                   th:classappend="${!tieneRutasConfiguradas ? ' module-unavailable' : ''}"
+                   th:attr="aria-disabled=${!tieneRutasConfiguradas}, tabindex=${!tieneRutasConfiguradas ? -1 : 0}"
+                   th:title="${!tieneRutasConfiguradas ? 'Próximamente para ' + sistemaActual.nombre : ''}">
                     <span class="admin-module-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15m6-12v15"/><path d="M12 7a2.5 2.5 0 0 1 5 0c0 2-2.5 4.5-2.5 4.5S12 9 12 7Z"/><circle cx="14.5" cy="7" r=".6"/></svg>
                     </span>
                     <span class="admin-module-title">Mapa interactivo (BETA)</span>
                     <span class="admin-module-description">Explora rutas y paradas en el mapa.</span>
-                    <span class="admin-module-link" th:text="${esTransmilenio ? 'Próximamente' : 'Abrir mapa →'}">Abrir mapa →</span>
+                    <span class="admin-module-link" th:text="${!tieneRutasConfiguradas ? 'Próximamente' : 'Abrir mapa →'}">Abrir mapa →</span>
                 </a>
 
                 <button class="admin-module-card reports-module" type="button" onclick="abrirModalExcel()">
@@ -186,9 +186,9 @@
                 <legend>Secciones del Excel</legend>
                 <label><input type="checkbox" id="incluirUsuarios" checked> Usuarios</label>
                 <label><input type="checkbox" id="incluirTransacciones" checked> Transacciones</label>
-                <label th:title="${esTransmilenio ? 'Disponible solo para Transcaribe' : ''}">
-                    <input type="checkbox" id="incluirRutas" th:disabled="${esTransmilenio}">
-                    Historial de rutas de conductores <span th:if="${esTransmilenio}">(solo Transcaribe)</span>
+                <label th:title="${!tieneRutasConfiguradas ? 'Disponible solo para Transcaribe' : ''}">
+                    <input type="checkbox" id="incluirRutas" th:disabled="${!tieneRutasConfiguradas}">
+                    Historial de rutas de conductores <span th:if="${!tieneRutasConfiguradas}">(solo Transcaribe)</span>
                 </label>
                 <label><input type="checkbox" id="incluirAvisos"> Historial de avisos</label>
             </fieldset>

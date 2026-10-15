@@ -99,6 +99,7 @@ public class AdminController {
         model.addAttribute("totalUsuarios", contarUsuariosSistema(sistemaActual));
         model.addAttribute("sistemaActual", sistemaActual);
         model.addAttribute("esTransmilenio", sistemaActual == SistemaTransporte.TRANSMILENIO);
+        model.addAttribute("tieneRutasConfiguradas", sistemaActual.tieneRutasConfiguradas());
         model.addAttribute("esAdministradorGlobal", authentication.getAuthorities().stream()
                 .anyMatch(autoridad -> "ROLE_ADMIN".equals(autoridad.getAuthority())));
         usuarioRepository.findByCorreo(authentication.getName()).ifPresent(usuario ->
@@ -195,6 +196,7 @@ public class AdminController {
         model.addAttribute("sistemasTransporte", SistemaTransporte.disponibles());
         model.addAttribute("totalFiltrado", totalFiltrado);
         model.addAttribute("search", search != null ? search : "");
+        model.addAttribute("tieneRutasConfiguradas", sistemaActual.tieneRutasConfiguradas());
         model.addAttribute("roleSeleccionado", role);
         model.addAttribute("fechaDesde", fechaDesde);
         model.addAttribute("fechaHasta", fechaHasta);
@@ -355,7 +357,7 @@ public class AdminController {
         if (sistemaActual == null || !sistemaActual.estaDisponible()) {
             return ResponseEntity.badRequest().build();
         }
-        if (sistemaActual == SistemaTransporte.TRANSMILENIO && incluirRutas) {
+        if (!sistemaActual.tieneRutasConfiguradas() && incluirRutas) {
             return ResponseEntity.badRequest().build();
         }
 
@@ -402,6 +404,11 @@ public class AdminController {
         Map<String, Object> response = new HashMap<>();
         SistemaTransporte sistemaActual = (SistemaTransporte) session.getAttribute(
                 SistemaTransporte.SESSION_ATTRIBUTE);
+        if (sistemaActual == null || !sistemaActual.tieneRutasConfiguradas()) {
+            response.put("status", "error");
+            response.put("message", "El cobro de pasajes desde el panel está disponible solo para Transcaribe.");
+            return ResponseEntity.status(403).body(response);
+        }
         Usuario pasajero = usuarioRepository.findById(userId).orElse(null);
         if (pasajero == null || pasajero.getSitm() != sistemaActual) {
             response.put("status", "error");

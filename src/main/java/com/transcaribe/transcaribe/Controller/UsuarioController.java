@@ -11,6 +11,7 @@ import com.transcaribe.transcaribe.service.TransaccionService;
 import com.transcaribe.transcaribe.service.BusService;
 import com.transcaribe.transcaribe.service.EmailService;
 import com.transcaribe.transcaribe.service.AvisoAdministrativoService;
+import com.transcaribe.transcaribe.Util.TarifaTranscaribe;
 import java.io.Serializable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -86,6 +87,8 @@ public class UsuarioController {
         if (sistema instanceof SistemaTransporte sistemaActual && sistemaActual.estaDisponible()) {
             model.addAttribute("sistemaActual", sistemaActual);
             model.addAttribute("esTransmilenio", sistemaActual == SistemaTransporte.TRANSMILENIO);
+            model.addAttribute("esTransmetro", sistemaActual == SistemaTransporte.TRANSMETRO);
+            model.addAttribute("tieneRutasConfiguradas", sistemaActual.tieneRutasConfiguradas());
         }
     }
 
@@ -146,6 +149,12 @@ public class UsuarioController {
         model.addAttribute("sistemaActual", sistemaActual);
         model.addAttribute("esAdministradorGlobal", esAdmin);
         model.addAttribute("esTransmilenio", sistemaActual == SistemaTransporte.TRANSMILENIO);
+        model.addAttribute("esTransmetro", sistemaActual == SistemaTransporte.TRANSMETRO);
+        model.addAttribute("tieneRutasConfiguradas", sistemaActual.tieneRutasConfiguradas());
+        model.addAttribute("permiteSimularViaje", sistemaActual.permiteSimularViaje());
+        if (sistemaActual.permiteSimularViaje()) {
+            model.addAttribute("valorPasaje", TarifaTranscaribe.paraSistema(sistemaActual));
+        }
         model.addAttribute("sistemasTransporte", SistemaTransporte.disponibles());
         model.addAttribute("alertasAdmin", avisoAdministrativoService.obtenerPendientes(usuario.getId(), sistemaActual));
         model.addAttribute("alertaReturnTo", "/menu");
@@ -519,7 +528,7 @@ public class UsuarioController {
         if (usuario == null) {
             return "redirect:/login";
         }
-        if (esTransmilenioSeleccionado(session)) {
+        if (!tieneRutasConfiguradas(session)) {
             return "redirect:/menu";
         }
 
@@ -550,7 +559,7 @@ public class UsuarioController {
         if (usuario == null) {
             return "redirect:/login";
         }
-        if (esTransmilenioSeleccionado(session)) {
+        if (!tieneRutasConfiguradas(session)) {
             return "redirect:/menu";
         }
 
@@ -567,7 +576,7 @@ public class UsuarioController {
         if (usuario == null) {
             return "redirect:/login";
         }
-        if (esTransmilenioSeleccionado(session)) {
+        if (!tieneRutasConfiguradas(session)) {
             return "redirect:/menu";
         }
 
@@ -589,7 +598,7 @@ public class UsuarioController {
         if (usuario == null) {
             return "redirect:/login";
         }
-        if (esTransmilenioSeleccionado(session)) {
+        if (!tieneRutasConfiguradas(session)) {
             return "redirect:/menu";
         }
         if (!usuario.getRutasFavoritas().contains(ruta)) {
@@ -619,7 +628,7 @@ public class UsuarioController {
         return "redirect:/rutas";
     }
 
-    private boolean esTransmilenioSeleccionado(HttpSession session) {
-        return session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE) == SistemaTransporte.TRANSMILENIO;
+    private boolean tieneRutasConfiguradas(HttpSession session) {
+        return session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE) == SistemaTransporte.TRANSCARIBE;
     }
 }

@@ -1332,6 +1332,39 @@ body[data-sistema="TRANSMILENIO"] .module-unavailable .admin-module-link {
   padding: 5px 10px;
 }
 
+body[data-sistema="TRANSMETRO"] {
+  --tinta: #174b2c;
+  --tinta-2: #103a20;
+  --caribe: #12a842;
+  --caribe-soft: #e7f7e9;
+  --coral: #12a842;
+  --coral-2: #087a2e;
+  --mango: #c5ed36;
+  --mango-soft: #f5fbdc;
+  --arena: #f5f8f1;
+  --linea: rgba(18, 168, 66, 0.18);
+  --accent: #12a842;
+  --accent-2: #087a2e;
+  --accent-3: #c5ed36;
+  --text: #174b2c;
+  --text-light: #087a2e;
+}
+
+body[data-sistema="TRANSMETRO"] .admin-module-card:not(:disabled):hover { border-color: rgba(18, 168, 66, .42); }
+body[data-sistema="TRANSMETRO"] .users-module .admin-module-icon,
+body[data-sistema="TRANSMETRO"] .announcements-module .admin-module-icon,
+body[data-sistema="TRANSMETRO"] .transactions-module .admin-module-icon { background: #e7f7e9; }
+body[data-sistema="TRANSMETRO"] .users-module .admin-module-icon svg,
+body[data-sistema="TRANSMETRO"] .announcements-module .admin-module-icon svg,
+body[data-sistema="TRANSMETRO"] .transactions-module .admin-module-icon svg { color: #087a2e; }
+body[data-sistema="TRANSMETRO"] .admin-module-card.module-unavailable,
+body[data-sistema="TRANSMETRO"] .admin-module-card.module-unavailable:hover {
+  cursor: not-allowed; opacity: .62; border-style: dashed; box-shadow: none; transform: none;
+}
+body[data-sistema="TRANSMETRO"] .module-unavailable .admin-module-link {
+  color: #174b2c; background: #f5fbdc; border-radius: 999px; padding: 5px 10px;
+}
+
 .transaction-filters {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
