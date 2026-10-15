@@ -114,7 +114,7 @@ public class TarjetaController {
 
         boolean recargaRapida = "RAPIDA".equalsIgnoreCase(modoRecarga);
         if (recargaRapida && sistema == SistemaTransporte.TRANSMETRO) {
-            model.addAttribute("error", "La recarga por cantidad de pasajes estará disponible cuando configuremos la tarifa de Transmetro.");
+            model.addAttribute("error", "La recarga por cantidad de pasajes aún no está habilitada para Transmetro.");
             prepararFormularioRecarga(model, usuario, sistema, "NORMAL", cantidadPasajes, monto);
             return "usuarios/tarjetas/recarga";
         }

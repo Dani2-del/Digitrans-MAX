@@ -285,7 +285,7 @@ body.login-page .center-card {
   text-align: center;
   margin: 20px 0;
   padding: 15px;
-  background: #E3600F;
+  background: var(--coral);
   border-radius: 10px;
 }
 
@@ -980,6 +980,23 @@ body[data-sistema="TRANSMILENIO"] {
 body[data-sistema="TRANSMILENIO"] .conductor-navbar {
   background-image: linear-gradient(120deg, #9d1733, #c8102e);
   border-bottom: 3px solid #f4d03f;
+}
+
+body[data-sistema="TRANSMETRO"] {
+  --tinta: #174b2c;
+  --tinta-2: #087a2e;
+  --caribe: #12a842;
+  --caribe-soft: #e7f7e9;
+  --coral: #12a842;
+  --coral-2: #087a2e;
+  --mango: #d5f65b;
+  --mango-soft: #f5fbdc;
+  --arena: #f5f8f1;
+  --linea: rgba(18, 168, 66, .18);
+}
+body[data-sistema="TRANSMETRO"] .conductor-navbar {
+  background-image: linear-gradient(120deg, #087a2e, #12a842);
+  border-bottom: 3px solid #c5ed36;
 }
 
 @media (prefers-reduced-motion: reduce) {

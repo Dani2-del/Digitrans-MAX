@@ -31,7 +31,7 @@
     </style>
     <th:block th:replace="~{fragments/loading-indicator :: styles}"></th:block>
 </head>
-<body>
+<body th:attr="data-sistema=${sistemaActual}">
 <div class="page">
     <div class="center-card">
         <div class="card">

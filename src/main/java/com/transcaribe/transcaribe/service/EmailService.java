@@ -91,24 +91,27 @@ public class EmailService {
 
     @Async
     public void enviarNotificacionHorarioAsignado(String destinatario, String nombre, String ruta,
-                                                   LocalDate fecha, LocalTime horaInicio, LocalTime horaFin) {
+                                                   LocalDate fecha, LocalTime horaInicio, LocalTime horaFin,
+                                                   com.transcaribe.transcaribe.Model.SistemaTransporte sistema) {
         enviarNotificacionHorario(destinatario, nombre, ruta, fecha, horaInicio, horaFin,
-                "📅 Nueva ruta asignada - Transcaribe",
-                "Se te ha asignado una nueva ruta.");
+                "📅 Nueva ruta asignada - " + sistema.getNombre(),
+                "Se te ha asignado una nueva ruta.", sistema);
     }
 
     @Async
     public void enviarNotificacionHorarioActualizado(String destinatario, String nombre, String ruta,
-                                                     LocalDate fecha, LocalTime horaInicio, LocalTime horaFin) {
+                                                     LocalDate fecha, LocalTime horaInicio, LocalTime horaFin,
+                                                     com.transcaribe.transcaribe.Model.SistemaTransporte sistema) {
         enviarNotificacionHorario(destinatario, nombre, ruta, fecha, horaInicio, horaFin,
-                "✏️ Ruta actualizada - Transcaribe",
-                "El administrador ha actualizado uno de tus horarios.");
+                "✏️ Ruta actualizada - " + sistema.getNombre(),
+                "El administrador ha actualizado uno de tus horarios.", sistema);
     }
 
     public void enviarReporteConductor(List<String> destinatarios, String nombreConductor,
-                                       String correoConductor, String asunto, String detalle) {
+                                       String correoConductor, String asunto, String detalle,
+                                       com.transcaribe.transcaribe.Model.SistemaTransporte sistema) {
         if (destinatarios == null || destinatarios.isEmpty()) {
-            throw new IllegalStateException("No hay administradores activos para recibir el reporte.");
+            throw new IllegalStateException("No hay administradores o moderadores activos de este servicio para recibir el reporte.");
         }
         if (asunto == null || asunto.isBlank() || detalle == null || detalle.isBlank()) {
             throw new IllegalArgumentException("El asunto y el detalle del reporte son obligatorios.");
@@ -118,12 +121,13 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
             helper.setTo(destinatarios.toArray(new String[0]));
-            helper.setSubject("[Reporte de conductor] " + asunto.trim());
+            helper.setSubject("[" + sistema.getNombre() + " · Reporte de conductor] " + asunto.trim());
             helper.setFrom(remitente);
 
             String contenidoHtml =
                     "<div style='font-family: Arial, sans-serif; border: 1px solid #ddd; border-radius: 10px; padding: 20px; max-width: 620px;'>" +
-                    "<h2 style='color: #0f3948;'>Reporte de conductor - Transcaribe</h2>" +
+                    "<h2 style='color: #0f3948;'>Reporte de conductor - " +
+                    HtmlUtils.htmlEscape(sistema.getNombre()) + "</h2>" +
                     "<p><strong>Conductor:</strong> " + HtmlUtils.htmlEscape(nombreConductor) + "</p>" +
                     "<p><strong>Correo:</strong> " + HtmlUtils.htmlEscape(correoConductor) + "</p>" +
                     "<p><strong>Asunto:</strong> " + HtmlUtils.htmlEscape(asunto.trim()) + "</p>" +
@@ -142,7 +146,8 @@ public class EmailService {
 
     private void enviarNotificacionHorario(String destinatario, String nombre, String ruta,
                                            LocalDate fecha, LocalTime horaInicio, LocalTime horaFin,
-                                           String asunto, String mensaje) {
+                                           String asunto, String mensaje,
+                                           com.transcaribe.transcaribe.Model.SistemaTransporte sistema) {
         if (destinatario == null || destinatario.isBlank()) {
             System.err.println("No se envió la notificación de horario: el conductor no tiene correo.");
             return;
@@ -156,7 +161,7 @@ public class EmailService {
 
             String contenidoHtml =
                     "<div style='font-family: Arial, sans-serif; border: 1px solid #ddd; border-radius: 10px; padding: 20px; max-width: 560px;'>" +
-                    "<h2 style='color: #2a9d8f; text-align: center;'>🚍 Transcaribe</h2>" +
+                    "<h2 style='color: #2a9d8f; text-align: center;'>" + HtmlUtils.htmlEscape(sistema.getNombre()) + "</h2>" +
                     "<p>Hola <strong>" + nombre + "</strong>,</p>" +
                     "<p>" + mensaje + "</p>" +
                     "<div style='background-color: #f1f8f9; padding: 15px; border-radius: 6px; border-left: 5px solid #2a9d8f;'>" +
@@ -165,7 +170,7 @@ public class EmailService {
                     "<p style='margin: 4px 0;'>📆 <strong>Fecha:</strong> " + fecha + "</p>" +
                     "<p style='margin: 4px 0;'>🕐 <strong>Horario:</strong> " + horaInicio + " - " + horaFin + "</p>" +
                     "</div>" +
-                    "<p style='font-size: 12px; color: #888; margin-top: 20px;'>Este es un correo automático de Transcaribe.</p>" +
+                    "<p style='font-size: 12px; color: #888; margin-top: 20px;'>Este es un correo automático de " + HtmlUtils.htmlEscape(sistema.getNombre()) + ".</p>" +
                     "</div>";
 
             helper.setText(contenidoHtml, true);

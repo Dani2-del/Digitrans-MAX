@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import com.transcaribe.transcaribe.Model.RutaTransmilenio;
+import com.transcaribe.transcaribe.Model.RutaTransmetro;
 
 @Service 
 public class BusService {
@@ -133,6 +134,41 @@ public class BusService {
 
         return "Cobro exitoso. Ruta " + ruta.getCodigoLinea() + ": " + ruta.getOrigen()
                 + " → " + ruta.getDestino() + ". Saldo restante: $" + nuevoSaldo;
+    }
+
+    public String simularViajeTransmetro(String usuarioId, String numeroTarjeta,
+                                         RutaTransmetro ruta) {
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        if (!usuario.isActivo()) return "La cuenta está inactiva.";
+
+        BigDecimal costo = BigDecimal.valueOf(
+                TarifaTranscaribe.paraSistema(SistemaTransporte.TRANSMETRO));
+        Tarjeta tarjeta = usuario.getTarjetas().stream()
+                .filter(t -> numeroTarjeta.equals(t.getNumeroTarjeta()))
+                .filter(t -> t.getSistemaTransporte() == SistemaTransporte.TRANSMETRO)
+                .findFirst()
+                .orElse(null);
+        if (tarjeta == null) return "La tarjeta seleccionada no es válida para Transmetro.";
+        if (tarjeta.getSaldo() == null || tarjeta.getSaldo().compareTo(costo) < 0) {
+            return "Saldo insuficiente en la tarjeta " + numeroTarjeta;
+        }
+
+        BigDecimal nuevoSaldo = tarjeta.getSaldo().subtract(costo);
+        tarjeta.setSaldo(nuevoSaldo);
+        usuarioRepository.save(usuario);
+
+        Transaccion transaccion = new Transaccion(costo.doubleValue(), LocalDateTime.now(),
+                "PASAJE [" + numeroTarjeta + "] - Transmetro " + ruta.codigo()
+                        + " (" + ruta.paradas().get(0) + " → "
+                        + ruta.paradas().get(ruta.paradas().size() - 1) + ")", usuario);
+        transaccion.setSistemaTransporte(SistemaTransporte.TRANSMETRO);
+        transaccion.setTarjetaTranscaribe(numeroTarjeta);
+        transaccionRepository.save(transaccion);
+
+        return "Cobro exitoso. Ruta " + ruta.codigo() + ": " + ruta.paradas().get(0)
+                + " → " + ruta.paradas().get(ruta.paradas().size() - 1)
+                + ". Saldo restante: $" + nuevoSaldo;
     }
 
     public List<String> obtenerTodasLasRutas() {

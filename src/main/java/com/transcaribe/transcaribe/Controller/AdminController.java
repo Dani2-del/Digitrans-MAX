@@ -215,13 +215,20 @@ public class AdminController {
     }
 
     private Criteria criterioSistemaUsuario(SistemaTransporte sistemaActual) {
-        return new Criteria().orOperator(
-                new Criteria().andOperator(
-                        Criteria.where("role").is(Usuario.ROLE_MODERATOR),
-                        Criteria.where("sistemaAsignado").is(sistemaActual)),
-                new Criteria().andOperator(
-                        Criteria.where("role").ne(Usuario.ROLE_MODERATOR),
-                        Criteria.where("sitm").is(sistemaActual)));
+        List<Criteria> criterios = new ArrayList<>();
+        criterios.add(new Criteria().andOperator(
+                Criteria.where("role").is(Usuario.ROLE_MODERATOR),
+                Criteria.where("sistemaAsignado").is(sistemaActual)));
+        criterios.add(new Criteria().andOperator(
+                Criteria.where("role").ne(Usuario.ROLE_MODERATOR),
+                Criteria.where("sitm").is(sistemaActual)));
+        // Los conductores creados antes de asignar SITM pertenecían a Transcaribe.
+        if (sistemaActual == SistemaTransporte.TRANSCARIBE) {
+            criterios.add(new Criteria().andOperator(
+                    Criteria.where("role").is(Usuario.ROLE_CONDUCTOR),
+                    Criteria.where("sitm").is(null)));
+        }
+        return new Criteria().orOperator(criterios.toArray(Criteria[]::new));
     }
 
     private LocalDate parseFechaUsuario(String fecha) {
@@ -456,7 +463,7 @@ public class AdminController {
             if (Usuario.ROLE_CONDUCTOR.equals(role)
                     && (sistemaActual == null || !sistemaActual.permiteGestionConductores())) {
                 response.put("status", "error");
-                response.put("message", "La gestión de conductores está disponible para Transcaribe y TransMilenio.");
+                response.put("message", "La gestión de conductores no está disponible para el servicio seleccionado.");
                 return ResponseEntity.badRequest().body(response);
             }
             if (Usuario.ROLE_MODERATOR.equals(role)
@@ -525,6 +532,9 @@ public class AdminController {
         return usuario != null && sistemaActual != null
                 && (Usuario.ROLE_MODERATOR.equals(usuario.getRole())
                     ? usuario.getSistemaAsignado() == sistemaActual
-                    : usuario.getSitm() == sistemaActual);
+                    : usuario.getSitm() == sistemaActual
+                        || (Usuario.ROLE_CONDUCTOR.equals(usuario.getRole())
+                            && usuario.getSitm() == null
+                            && sistemaActual == SistemaTransporte.TRANSCARIBE));
     }
 }

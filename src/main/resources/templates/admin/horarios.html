@@ -19,7 +19,7 @@
             <header class="admin-home-header">
                 <div>
                     <p class="admin-eyebrow" th:text="|${sistemaActual.nombre} · ${esModerador ? 'MODERACIÓN' : 'ADMINISTRACIÓN'}|">Digitrans · ADMINISTRACIÓN</p>
-                    <h1 th:text="${esTransmilenio ? 'Gestión de conductores TransMilenio' : 'Gestión de rutas y buses'}">Gestión de rutas y buses</h1>
+                    <h1 th:text="${esTransmilenio ? 'Gestión de conductores TransMilenio' : (esTransmetro ? 'Gestión de conductores Transmetro' : 'Gestión de rutas y buses')}">Gestión de rutas y buses</h1>
                     <p class="admin-home-subtitle">Elige qué deseas gestionar.</p>
                 </div>
                 <div class="admin-home-actions">
@@ -41,7 +41,7 @@
                 <a class="admin-module-card buses-module" th:href="@{/admin/horarios/buses}">
                     <span class="admin-module-icon" aria-hidden="true">🚌</span>
                     <span class="admin-module-title">Crear bus</span>
-                    <span class="admin-module-description" th:text="${esTransmilenio ? 'Registra buses TransMilenio y asígnales servicios troncales.' : 'Registra y administra los buses y sus rutas.'}">Registra y administra los buses y sus rutas.</span>
+                    <span class="admin-module-description" th:text="${esTransmilenio ? 'Registra buses TransMilenio y asígnales servicios troncales.' : (esTransmetro ? 'Registra buses Transmetro y asígnales rutas troncales.' : 'Registra y administra los buses y sus rutas.')}">Registra y administra los buses y sus rutas.</span>
                     <span class="admin-module-link">Gestionar buses <span aria-hidden="true">→</span></span>
                 </a>
 

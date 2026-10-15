@@ -9,6 +9,7 @@ import com.transcaribe.transcaribe.Repository.HorarioConductorRepository;
 import com.transcaribe.transcaribe.Repository.UsuarioRepository;
 import com.transcaribe.transcaribe.service.EmailService;
 import com.transcaribe.transcaribe.service.CatalogoRutasTransmilenioService;
+import com.transcaribe.transcaribe.service.CatalogoRutasTransmetroService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -46,6 +47,9 @@ public class HorarioController {
 
     @Autowired
     private CatalogoRutasTransmilenioService catalogoRutasTransmilenioService;
+
+    @Autowired
+    private CatalogoRutasTransmetroService catalogoRutasTransmetroService;
  
     @GetMapping
     public String menuHorarios(Model model, HttpSession session,
@@ -53,6 +57,7 @@ public class HorarioController {
         SistemaTransporte sistema = sistemaActual(session);
         model.addAttribute("sistemaActual", sistema);
         model.addAttribute("esTransmilenio", sistema == SistemaTransporte.TRANSMILENIO);
+        model.addAttribute("esTransmetro", sistema == SistemaTransporte.TRANSMETRO);
         boolean esModerador = authentication != null && usuarioRepository.findByCorreo(authentication.getName())
                 .map(usuario -> Usuario.ROLE_MODERATOR.equals(usuario.getRole())).orElse(false);
         model.addAttribute("esModerador", esModerador);
@@ -86,9 +91,15 @@ public class HorarioController {
         model.addAttribute("buses", buses);
         model.addAttribute("sistemaActual", sistema);
         model.addAttribute("esTransmilenio", sistema == SistemaTransporte.TRANSMILENIO);
+        model.addAttribute("esTransmetro", sistema == SistemaTransporte.TRANSMETRO);
+        model.addAttribute("esSistemaTroncal", sistema == SistemaTransporte.TRANSMILENIO
+                || sistema == SistemaTransporte.TRANSMETRO);
         List<String> rutasDisponibles = sistema == SistemaTransporte.TRANSMILENIO
                 ? catalogoRutasTransmilenioService.obtenerRutasActivas().stream()
                         .map(com.transcaribe.transcaribe.Model.RutaTransmilenio::getEtiqueta).toList()
+                : sistema == SistemaTransporte.TRANSMETRO
+                ? catalogoRutasTransmetroService.obtenerRutasActivas().stream()
+                        .map(com.transcaribe.transcaribe.Model.RutaTransmetro::getEtiqueta).toList()
                 : busRepository.findAll().stream()
                         .filter(bus -> bus.getSistemaTransporte() == sistema)
                         .filter(bus -> bus.getRutas() != null)
@@ -147,10 +158,16 @@ public class HorarioController {
         model.addAttribute("busesRegistrados", busesFiltrados.subList(desde, hasta));
         model.addAttribute("sistemaActual", sistema);
         model.addAttribute("esTransmilenio", sistema == SistemaTransporte.TRANSMILENIO);
+        model.addAttribute("esTransmetro", sistema == SistemaTransporte.TRANSMETRO);
+        model.addAttribute("esSistemaTroncal", sistema == SistemaTransporte.TRANSMILENIO
+                || sistema == SistemaTransporte.TRANSMETRO);
         model.addAttribute("esModerador", esModerador);
         List<String> rutasDisponibles = sistema == SistemaTransporte.TRANSMILENIO
                 ? catalogoRutasTransmilenioService.obtenerRutasActivas().stream()
                         .map(com.transcaribe.transcaribe.Model.RutaTransmilenio::getEtiqueta).toList()
+                : sistema == SistemaTransporte.TRANSMETRO
+                ? catalogoRutasTransmetroService.obtenerRutasActivas().stream()
+                        .map(com.transcaribe.transcaribe.Model.RutaTransmetro::getEtiqueta).toList()
                 : busRepository.findAll().stream()
                         .filter(bus -> bus.getSistemaTransporte() == sistema)
                         .filter(bus -> bus.getRutas() != null)
@@ -248,6 +265,7 @@ public class HorarioController {
         model.addAttribute("conductores", conductores);
         model.addAttribute("sistemaActual", sistema);
         model.addAttribute("esTransmilenio", sistema == SistemaTransporte.TRANSMILENIO);
+        model.addAttribute("esTransmetro", sistema == SistemaTransporte.TRANSMETRO);
         model.addAttribute("historial", horariosPagina);
         model.addAttribute("nombreConductor", nombreConductor);
         model.addAttribute("busConductor", busConductor);
@@ -408,6 +426,21 @@ public class HorarioController {
                 return "redirect:/admin/horarios/programar";
             }
         }
+        if (sistema == SistemaTransporte.TRANSMETRO) {
+            String rutaSolicitada = ruta.trim();
+            ruta = catalogoRutasTransmetroService.obtenerRutasActivas().stream()
+                    .filter(rutaTransmetro -> rutaTransmetro.getEtiqueta().equals(rutaSolicitada))
+                    .map(com.transcaribe.transcaribe.Model.RutaTransmetro::getEtiqueta)
+                    .findFirst().orElse(null);
+            if (ruta == null) {
+                redirectAttributes.addFlashAttribute("error", "Selecciona una ruta troncal activa de Transmetro.");
+                return "redirect:/admin/horarios/programar";
+            }
+            if (conductorTieneHorarioSolapado(conductorId, fechaProgramada, inicio, fin, null, sistema)) {
+                redirectAttributes.addFlashAttribute("error", "El conductor ya tiene un horario asignado en ese rango.");
+                return "redirect:/admin/horarios/programar";
+            }
+        }
         if (bus.getRutas() == null || !bus.getRutas().contains(ruta.trim())) {
             redirectAttributes.addFlashAttribute("error", "La ruta seleccionada no pertenece al bus elegido.");
             return "redirect:/admin/horarios/programar";
@@ -436,7 +469,8 @@ public class HorarioController {
                 horario.getRuta(),
                 horario.getFecha(),
                 horario.getHoraInicio(),
-                horario.getHoraFin()
+                horario.getHoraFin(),
+                sistema
         );
         redirectAttributes.addFlashAttribute("mensaje",
                 "Horario asignado correctamente. Se envió una notificación al correo del conductor.");
@@ -472,6 +506,7 @@ public class HorarioController {
         model.addAttribute("busRutasPorId", busRutasPorId);
         model.addAttribute("busSeleccionadoId", busIdDelHorario(horario));
         model.addAttribute("esTransmilenio", sistema == SistemaTransporte.TRANSMILENIO);
+        model.addAttribute("esTransmetro", sistema == SistemaTransporte.TRANSMETRO);
         model.addAttribute("sistemaActual", sistema);
         return "admin/editar-horario";
     }
@@ -531,6 +566,22 @@ public class HorarioController {
                 return "redirect:/admin/horarios/programar";
             }
         }
+        if (sistema == SistemaTransporte.TRANSMETRO) {
+            String rutaSolicitada = ruta.trim();
+            ruta = catalogoRutasTransmetroService.obtenerRutasActivas().stream()
+                    .filter(rutaTransmetro -> rutaTransmetro.getEtiqueta().equals(rutaSolicitada))
+                    .map(com.transcaribe.transcaribe.Model.RutaTransmetro::getEtiqueta)
+                    .findFirst().orElse(null);
+            if (ruta == null) {
+                redirectAttributes.addFlashAttribute("error", "Selecciona una ruta troncal activa de Transmetro.");
+                return "redirect:/admin/horarios/programar";
+            }
+            if (conductorTieneHorarioSolapado(conductor.getId(), fechaProgramada, inicio, fin,
+                    horario.getId(), sistema)) {
+                redirectAttributes.addFlashAttribute("error", "El conductor ya tiene otro horario en ese rango.");
+                return "redirect:/admin/horarios/programar";
+            }
+        }
         if (bus.getRutas() == null || !bus.getRutas().contains(ruta.trim())) {
             redirectAttributes.addFlashAttribute("error", "La ruta seleccionada no pertenece al bus elegido.");
             return "redirect:/admin/horarios/programar";
@@ -556,7 +607,8 @@ public class HorarioController {
                 horario.getRuta(),
                 horario.getFecha(),
                 horario.getHoraInicio(),
-                horario.getHoraFin()
+                horario.getHoraFin(),
+                sistema
         );
         redirectAttributes.addFlashAttribute("mensaje",
                 "Horario actualizado correctamente. Se envió una notificación al correo del conductor.");
@@ -612,6 +664,15 @@ public class HorarioController {
                     .map(com.transcaribe.transcaribe.Model.RutaTransmilenio::getEtiqueta).toList();
             if (listaRutas.isEmpty() || !rutasValidas.containsAll(listaRutas)) {
                 redirectAttributes.addFlashAttribute("error", "Selecciona al menos un servicio troncal válido.");
+                return "redirect:/admin/horarios/buses";
+            }
+            tipo = Bus.TIPO_TRONCAL;
+        }
+        if (sistema == SistemaTransporte.TRANSMETRO) {
+            List<String> rutasValidas = catalogoRutasTransmetroService.obtenerRutasActivas().stream()
+                    .map(com.transcaribe.transcaribe.Model.RutaTransmetro::getEtiqueta).toList();
+            if (listaRutas.isEmpty() || !rutasValidas.containsAll(listaRutas)) {
+                redirectAttributes.addFlashAttribute("error", "Selecciona al menos una ruta activa de Transmetro.");
                 return "redirect:/admin/horarios/buses";
             }
             tipo = Bus.TIPO_TRONCAL;
@@ -704,6 +765,15 @@ public class HorarioController {
                     .map(com.transcaribe.transcaribe.Model.RutaTransmilenio::getEtiqueta).toList();
             if (listaRutas.isEmpty() || !rutasValidas.containsAll(listaRutas)) {
                 redirectAttributes.addFlashAttribute("error", "Selecciona al menos un servicio troncal válido.");
+                return "redirect:/admin/horarios/buses";
+            }
+            tipo = Bus.TIPO_TRONCAL;
+        }
+        if (sistema == SistemaTransporte.TRANSMETRO) {
+            List<String> rutasValidas = catalogoRutasTransmetroService.obtenerRutasActivas().stream()
+                    .map(com.transcaribe.transcaribe.Model.RutaTransmetro::getEtiqueta).toList();
+            if (listaRutas.isEmpty() || !rutasValidas.containsAll(listaRutas)) {
+                redirectAttributes.addFlashAttribute("error", "Selecciona al menos una ruta activa de Transmetro.");
                 return "redirect:/admin/horarios/buses";
             }
             tipo = Bus.TIPO_TRONCAL;

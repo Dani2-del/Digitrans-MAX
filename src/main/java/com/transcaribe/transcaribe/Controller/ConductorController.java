@@ -78,7 +78,7 @@ public class ConductorController {
         model.addAttribute("esAdmin", esAdmin);
         model.addAttribute("esModerador", esModerador);
         model.addAttribute("esConductor", esConductor);
-        model.addAttribute("esConductorTranscaribe", esConductorAsignado);
+        model.addAttribute("puedeUsarPanelConductor", esConductorAsignado);
         return "choose-view";
     }
 
@@ -189,11 +189,15 @@ public class ConductorController {
             return "redirect:/conductor/panel";
         }
 
-        List<String> administradores = usuarioRepository
-                .findByRoleAndActivoTrue(Usuario.ROLE_ADMIN)
-                .stream()
+        SistemaTransporte sistema = sistemaConductor(conductor);
+        List<String> administradores = usuarioRepository.findAll().stream()
+                .filter(Usuario::isActivo)
+                .filter(usuario -> Usuario.ROLE_ADMIN.equals(usuario.getRole())
+                        || (Usuario.ROLE_MODERATOR.equals(usuario.getRole())
+                            && usuario.getSistemaAsignado() == sistema))
                 .map(Usuario::getCorreo)
                 .filter(correo -> correo != null && !correo.isBlank())
+                .distinct()
                 .collect(Collectors.toList());
         try {
             emailService.enviarReporteConductor(
@@ -202,7 +206,8 @@ public class ConductorController {
                             ? conductor.getCorreo() : conductor.getNombre(),
                     conductor.getCorreo(),
                     asunto,
-                    detalle
+                    detalle,
+                    sistema
             );
             redirectAttributes.addFlashAttribute("mensajeReporte",
                     "Reporte enviado correctamente a los administradores.");
@@ -278,9 +283,9 @@ public class ConductorController {
         horario.setEstado(HorarioConductor.ESTADO_EN_CURSO);
         horarioRepository.save(horario);
 
-        return sistemaConductor(conductor) == SistemaTransporte.TRANSMILENIO
-                ? "redirect:/conductor/panel?mensaje=servicio"
-                : "redirect:/conductor/panel?mensaje=ok&notificados=" + notificados;
+        return sistemaConductor(conductor) == SistemaTransporte.TRANSCARIBE
+                ? "redirect:/conductor/panel?mensaje=ok&notificados=" + notificados
+                : "redirect:/conductor/panel?mensaje=servicio";
     }
 
     @PostMapping("/conductor/terminar-ruta")

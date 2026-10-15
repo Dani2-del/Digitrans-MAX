@@ -4,10 +4,12 @@ import com.transcaribe.transcaribe.Model.Usuario;
 import com.transcaribe.transcaribe.Model.Tarjeta;
 import com.transcaribe.transcaribe.Model.SistemaTransporte;
 import com.transcaribe.transcaribe.Model.RutaTransmilenio;
+import com.transcaribe.transcaribe.Model.RutaTransmetro;
 import com.transcaribe.transcaribe.Repository.BusRepository;
 import com.transcaribe.transcaribe.Repository.UsuarioRepository;
 import com.transcaribe.transcaribe.service.BusService;
 import com.transcaribe.transcaribe.service.CatalogoRutasTransmilenioService;
+import com.transcaribe.transcaribe.service.CatalogoRutasTransmetroService;
 import com.transcaribe.transcaribe.service.ServiceTranscaribe;
 import com.transcaribe.transcaribe.service.EmailService;
 import com.transcaribe.transcaribe.Util.TarifaTranscaribe;
@@ -38,6 +40,9 @@ public class BusController {
 
     @Autowired
     private CatalogoRutasTransmilenioService catalogoRutasTransmilenioService;
+
+    @Autowired
+    private CatalogoRutasTransmetroService catalogoRutasTransmetroService;
 
     @Autowired
     private EmailService emailService;
@@ -116,7 +121,8 @@ public class BusController {
                 return "redirect:/menu";
             }
             if (sistema != SistemaTransporte.TRANSCARIBE
-                    && sistema != SistemaTransporte.TRANSMILENIO) {
+                    && sistema != SistemaTransporte.TRANSMILENIO
+                    && sistema != SistemaTransporte.TRANSMETRO) {
                 redirectAttributes.addFlashAttribute("error",
                         "Las operaciones de buses están disponibles por ahora solo para Transcaribe.");
                 return "redirect:/menu";
@@ -132,6 +138,14 @@ public class BusController {
                     return "redirect:/menu";
                 }
                 resultado = busService.simularViajeTransmilenio(usuarioId, numeroTarjeta, ruta);
+            } else if (sistema == SistemaTransporte.TRANSMETRO) {
+                RutaTransmetro ruta = catalogoRutasTransmetroService.obtenerRutaAleatoriaActiva()
+                        .orElse(null);
+                if (ruta == null) {
+                    redirectAttributes.addFlashAttribute("error", "No hay rutas activas de Transmetro configuradas.");
+                    return "redirect:/menu";
+                }
+                resultado = busService.simularViajeTransmetro(usuarioId, numeroTarjeta, ruta);
             } else {
                 var buses = busRepository.findAll().stream()
                         .filter(bus -> bus.getSistemaTransporte() == SistemaTransporte.TRANSCARIBE)

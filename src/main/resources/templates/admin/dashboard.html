@@ -175,7 +175,7 @@
             <option value="ROLE_USER">Usuario (ROLE_USER)</option>
             <option value="ROLE_ADMIN">Administrador (ROLE_ADMIN)</option>
             <option value="ROLE_MODERATOR">Moderador (ROLE_MODERATOR)</option>
-            <option value="ROLE_CONDUCTOR">Conductor (ROLE_CONDUCTOR · solo Transcaribe)</option>
+            <option value="ROLE_CONDUCTOR">Conductor (ROLE_CONDUCTOR · servicio actual)</option>
         </select>
         <div id="editModeratorService" style="display:none;margin-bottom:12px;">
             <label for="editSistemaAsignado" style="font-size:13px;color:#666;">Servicio del moderador:</label>
@@ -183,6 +183,9 @@
                 <option th:each="sistema : ${sistemasTransporte}"
                         th:value="${sistema.name()}" th:text="${sistema.nombre}"></option>
             </select>
+        </div>
+        <div id="editConductorService" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:8px;background:#f7fafc;color:#4a5568;font-size:13px;">
+            El conductor quedará asignado a <strong th:text="${sistemaActual.nombre}">Transcaribe</strong> y recibirá las rutas programadas para ese servicio.
         </div>
 
         <label style="font-size:13px;color:#666;">Seguridad:</label>
@@ -215,11 +218,14 @@
     const editRole = document.getElementById('editRole');
     const moderatorService = document.getElementById('editModeratorService');
     const assignedService = document.getElementById('editSistemaAsignado');
+    const conductorService = document.getElementById('editConductorService');
 
     function updateModeratorServiceVisibility() {
         const isModerator = editRole.value === 'ROLE_MODERATOR';
+        const isConductor = editRole.value === 'ROLE_CONDUCTOR';
         moderatorService.style.display = isModerator ? 'block' : 'none';
         assignedService.required = isModerator;
+        conductorService.style.display = isConductor ? 'block' : 'none';
     }
     editRole.addEventListener('change', updateModeratorServiceVisibility);
 

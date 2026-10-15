@@ -201,7 +201,7 @@
           <div>
             <span class="dashboard-eyebrow" th:text="${permiteSimularViaje ? '¿LISTO PARA VIAJAR?' : 'SERVICIO EN PREPARACIÓN'}">¿LISTO PARA VIAJAR?</span>
             <h2 th:text="${permiteSimularViaje ? 'Simula tu viaje' : 'Viajes en bus próximamente'}">Simula tu viaje</h2>
-            <p th:text="${permiteSimularViaje ? (esTransmilenio ? 'Elige tu tarjeta; al confirmar, se asignará una ruta troncal al azar.' : 'Selecciona tu tarjeta para simular el pago de un pasaje.') : 'Las operaciones de buses estarán disponibles próximamente para ' + sistemaActual.nombre + '.'}">Selecciona tu tarjeta para simular el pago de un pasaje.</p>
+            <p th:text="${permiteSimularViaje ? ((esTransmilenio or esTransmetro) ? 'Elige tu tarjeta; al confirmar, se asignará una ruta troncal al azar.' : 'Selecciona tu tarjeta para simular el pago de un pasaje.') : 'Las operaciones de buses estarán disponibles próximamente para ' + sistemaActual.nombre + '.'}">Selecciona tu tarjeta para simular el pago de un pasaje.</p>
           </div>
         </div>
         <div th:unless="${permiteSimularViaje}" class="ride-coming-soon">

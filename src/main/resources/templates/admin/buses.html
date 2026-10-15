@@ -42,6 +42,7 @@
         .route-picker-chip button { padding:0; border:0; background:transparent; color:var(--tinta); font-weight:700; cursor:pointer; }
         .route-picker-more { color:var(--piedra); font-size:12px; align-self:center; }
         body[data-sistema="TRANSMILENIO"] .route-picker-option input { accent-color:#c8102e; }
+        body[data-sistema="TRANSMETRO"] .route-picker-option input { accent-color:#12a842; }
         @media (max-width:700px) { .bus-management-form { grid-template-columns:1fr; } .bus-row { align-items:flex-start; flex-direction:column; } }
     </style>
     <th:block th:replace="~{fragments/loading-indicator :: styles}"></th:block>
@@ -53,8 +54,8 @@
             <header class="bus-management-header">
                 <div>
                     <p class="admin-eyebrow" th:text="|${sistemaActual.nombre} · ${esModerador ? 'MODERACIÓN' : 'ADMINISTRACIÓN'}|">Digitrans · ADMINISTRACIÓN</p>
-                    <h1 th:text="${esTransmilenio ? 'Buses TransMilenio' : 'Crear y gestionar buses'}">Crear y gestionar buses</h1>
-                    <p class="admin-home-subtitle" th:text="${esTransmilenio ? 'Registra buses y asigna servicios troncales.' : 'Registra buses y configura las rutas que pueden operar.'}">Registra buses y configura las rutas que pueden operar.</p>
+                    <h1 th:text="${esTransmilenio ? 'Buses TransMilenio' : (esTransmetro ? 'Buses Transmetro' : 'Crear y gestionar buses')}">Crear y gestionar buses</h1>
+                    <p class="admin-home-subtitle" th:text="${esSistemaTroncal ? 'Registra buses y asigna servicios troncales.' : 'Registra buses y configura las rutas que pueden operar.'}">Registra buses y configura las rutas que pueden operar.</p>
                 </div>
                 <a th:href="@{/admin/horarios}" class="btn-pagina">← Menú de horarios</a>
             </header>
@@ -63,12 +64,12 @@
             <p th:if="${error}" class="flash-error" th:text="${error}" role="alert"></p>
 
             <h2>Registrar bus</h2>
-            <form class="bus-management-form" th:classappend="${esTransmilenio ? ' transmilenio-bus-form' : ''}" th:action="@{/admin/horarios/buses/crear}" method="post">
+            <form class="bus-management-form" th:classappend="${esSistemaTroncal ? ' transmilenio-bus-form' : ''}" th:action="@{/admin/horarios/buses/crear}" method="post">
                 <div class="form-row">
                     <label for="placa">Número del bus</label>
                     <input id="placa" type="text" name="placa" placeholder="Ej.: B-210" required>
                 </div>
-                <div class="form-row" th:unless="${esTransmilenio}">
+                <div class="form-row" th:unless="${esSistemaTroncal}">
                     <label for="tipo">Tipo de servicio</label>
                     <select id="tipo" name="tipo" required>
                         <option value="TRONCAL">Troncal</option>
@@ -76,7 +77,7 @@
                         <option value="ALIMENTADOR">Alimentador</option>
                     </select>
                 </div>
-                <div class="form-row" th:unless="${esTransmilenio}">
+                <div class="form-row" th:unless="${esSistemaTroncal}">
                     <label for="rutasTranscaribe">Rutas que operará</label>
                     <div class="route-picker" data-route-picker th:attr="data-item-name=${esTransmilenio ? 'servicio' : 'ruta'}">
                         <button id="rutasTranscaribe" type="button" class="route-picker-toggle" aria-expanded="false">
@@ -99,8 +100,8 @@
                         <div class="route-picker-chips" aria-live="polite"></div>
                     </div>
                 </div>
-                <div class="form-row" th:if="${esTransmilenio}">
-                    <label for="rutasTransmilenio">Servicios troncales que operará</label>
+                <div class="form-row" th:if="${esSistemaTroncal}">
+                    <label for="rutasTransmilenio" th:text="${esTransmetro ? 'Rutas troncales que operará' : 'Servicios troncales que operará'}">Servicios troncales que operará</label>
                     <div class="route-picker" data-route-picker data-item-name="servicio">
                         <button id="rutasTransmilenio" type="button" class="route-picker-toggle" aria-expanded="false">
                             <span>Seleccionar servicios</span><span class="route-picker-count">0 servicios seleccionados</span>
@@ -127,7 +128,7 @@
                 <h2>Buses registrados</h2>
                 <form class="bus-tools" th:action="@{/admin/horarios/buses}" method="get">
                     <input type="search" name="buscarBus" th:value="${buscarBus}" placeholder="Buscar por número...">
-                    <select name="tipoBus" th:unless="${esTransmilenio}">
+                    <select name="tipoBus" th:unless="${esSistemaTroncal}">
                         <option value="">Todos los tipos</option>
                         <option value="TRONCAL" th:selected="${tipoBusSeleccionado == 'TRONCAL'}">Troncal</option>
                         <option value="PETRONCAL" th:selected="${tipoBusSeleccionado == 'PETRONCAL'}">Petroncal</option>
@@ -183,7 +184,7 @@
                 <label for="editarBusPlaca">Número del bus</label>
                 <input type="text" name="placa" id="editarBusPlaca" required>
             </div>
-            <div class="form-row" th:unless="${esTransmilenio}">
+            <div class="form-row" th:unless="${esSistemaTroncal}">
                 <label for="editarBusTipo">Tipo de servicio</label>
                 <select name="tipo" id="editarBusTipo" required>
                     <option value="TRONCAL">Troncal</option>
@@ -191,7 +192,7 @@
                     <option value="ALIMENTADOR">Alimentador</option>
                 </select>
             </div>
-            <div class="form-row" th:unless="${esTransmilenio}">
+            <div class="form-row" th:unless="${esSistemaTroncal}">
                 <label for="editarRutasTranscaribe">Rutas que operará</label>
                 <div class="route-picker" data-route-picker th:attr="data-item-name=${esTransmilenio ? 'servicio' : 'ruta'}">
                     <button id="editarRutasTranscaribe" type="button" class="route-picker-toggle" aria-expanded="false">
@@ -214,8 +215,8 @@
                     <div class="route-picker-chips" aria-live="polite"></div>
                 </div>
             </div>
-            <div class="form-row" th:if="${esTransmilenio}">
-                <label for="editarRutasTransmilenio">Servicios troncales que operará</label>
+            <div class="form-row" th:if="${esSistemaTroncal}">
+                <label for="editarRutasTransmilenio" th:text="${esTransmetro ? 'Rutas troncales que operará' : 'Servicios troncales que operará'}">Servicios troncales que operará</label>
                 <div class="route-picker" data-route-picker data-item-name="servicio">
                     <button id="editarRutasTransmilenio" type="button" class="route-picker-toggle" aria-expanded="false">
                         <span>Seleccionar servicios</span><span class="route-picker-count">0 servicios seleccionados</span>
