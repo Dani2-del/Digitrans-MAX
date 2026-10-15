@@ -104,13 +104,15 @@ public class AdminChartsController {
                 new Document("$sort", new Document("cantidad", -1))
         ), sistemaActual);
 
-        List<ChartPoint> horariosPorEstado = aggregate("horarios_conductor", List.of(
+        List<ChartPoint> horariosPorEstado = sistemaActual == SistemaTransporte.TRANSMILENIO
+                ? List.of() : aggregate("horarios_conductor", List.of(
                 new Document("$group", new Document("_id", "$estado")
                         .append("cantidad", new Document("$sum", 1))),
                 new Document("$sort", new Document("cantidad", -1))
         ));
 
-        List<ChartPoint> rutasMasProgramadas = aggregate("horarios_conductor", List.of(
+        List<ChartPoint> rutasMasProgramadas = sistemaActual == SistemaTransporte.TRANSMILENIO
+                ? List.of() : aggregate("horarios_conductor", List.of(
                 new Document("$match", new Document("ruta",
                         new Document("$type", "string").append("$ne", ""))),
                 new Document("$group", new Document("_id", "$ruta")
@@ -135,7 +137,8 @@ public class AdminChartsController {
         EstadisticasAdmin stats = new EstadisticasAdmin(
                 mongoTemplate.getCollection("usuarios").countDocuments(filtroUsuariosSistema(sistemaActual)),
                 mongoTemplate.getCollection("transacciones").countDocuments(filtroSistema(sistemaActual)),
-                mongoTemplate.getCollection("horarios_conductor").countDocuments(),
+                sistemaActual == SistemaTransporte.TRANSMILENIO ? 0L
+                        : mongoTemplate.getCollection("horarios_conductor").countDocuments(),
                 mongoTemplate.getCollection("avisos_administrativos")
                         .countDocuments(filtroAvisosSistema(sistemaActual)),
                 usuariosPorRol,

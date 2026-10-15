@@ -58,6 +58,8 @@ public class ConductorController {
         boolean esAdmin = Usuario.ROLE_ADMIN.equals(usuario.getRole());
         boolean esModerador = Usuario.ROLE_MODERATOR.equals(usuario.getRole());
         boolean esConductor = Usuario.ROLE_CONDUCTOR.equals(usuario.getRole());
+        boolean esConductorTranscaribe = esConductor
+                && (usuario.getSitm() == null || usuario.getSitm() == SistemaTransporte.TRANSCARIBE);
 
         // Un usuario normal no tiene nada que elegir, va directo a su menú
         if (!esAdmin && !esModerador && !esConductor) {
@@ -75,6 +77,7 @@ public class ConductorController {
         model.addAttribute("esAdmin", esAdmin);
         model.addAttribute("esModerador", esModerador);
         model.addAttribute("esConductor", esConductor);
+        model.addAttribute("esConductorTranscaribe", esConductorTranscaribe);
         return "choose-view";
     }
 
@@ -90,8 +93,12 @@ public class ConductorController {
         if (conductor == null) {
             return "redirect:/login";
         }
+        if (!esConductorTranscaribe(conductor)) {
+            return "redirect:/menu";
+        }
 
         model.addAttribute("usuario", conductor);
+        model.addAttribute("sistemaActual", SistemaTransporte.TRANSCARIBE);
         model.addAttribute("alertasAdmin", avisoAdministrativoService.obtenerPendientes(conductor.getId()));
         model.addAttribute("alertaReturnTo", "/conductor/panel");
 
@@ -164,6 +171,9 @@ public class ConductorController {
         if (conductor == null) {
             return "redirect:/login";
         }
+        if (!esConductorTranscaribe(conductor)) {
+            return "redirect:/menu";
+        }
 
         if (asunto.isBlank() || detalle.isBlank()) {
             redirectAttributes.addFlashAttribute("errorReporte",
@@ -201,6 +211,9 @@ public class ConductorController {
 
         if (conductor == null) {
             return "redirect:/login";
+        }
+        if (!esConductorTranscaribe(conductor)) {
+            return "redirect:/menu";
         }
 
         if (sentido == null) {
@@ -264,6 +277,9 @@ public class ConductorController {
         if (conductor == null) {
             return "redirect:/login";
         }
+        if (!esConductorTranscaribe(conductor)) {
+            return "redirect:/menu";
+        }
 
         HorarioConductor horario = horarioRepository.findByIdAndConductorId(horarioId, conductor.getId()).orElse(null);
 
@@ -291,5 +307,10 @@ public class ConductorController {
             return horario.getBusId();
         }
         return conductor == null ? null : conductor.getBusAsignado();
+    }
+
+    private boolean esConductorTranscaribe(Usuario usuario) {
+        return usuario != null && Usuario.ROLE_CONDUCTOR.equals(usuario.getRole())
+                && (usuario.getSitm() == null || usuario.getSitm() == SistemaTransporte.TRANSCARIBE);
     }
 }

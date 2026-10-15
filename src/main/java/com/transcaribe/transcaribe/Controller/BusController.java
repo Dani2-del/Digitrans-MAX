@@ -44,6 +44,10 @@ public class BusController {
             if (sistema == null) {
                 return ResponseEntity.badRequest().body("Selecciona un sistema de transporte válido.");
             }
+            if (sistema != SistemaTransporte.TRANSCARIBE) {
+                return ResponseEntity.status(403)
+                        .body("Las operaciones de buses están disponibles por ahora solo para Transcaribe.");
+            }
             String resultado = busService.pagarPasajeConTarjetaEspecifica(
                     usuarioId, busId, numeroTarjeta, sistema);
             if (resultado.contains("Saldo insuficiente") || resultado.contains("no es válida")) {
@@ -62,7 +66,8 @@ public class BusController {
                     );
 
                     Tarjeta tarjetaUsada = usuarioDestino.getTarjetas().stream()
-                        .filter(t -> t.getNumeroTarjeta().equals(numeroTarjeta))
+                        .filter(t -> t.getNumeroTarjeta().equals(numeroTarjeta)
+                                && t.getSistemaTransporte() == sistema)
                         .findFirst()
                         .orElse(null);
                     if (tarjetaUsada != null) {
@@ -81,7 +86,11 @@ public class BusController {
 
     @PostMapping("/setup")
     @ResponseBody
-    public ResponseEntity<String> setup() {
+    public ResponseEntity<String> setup(HttpSession session) {
+        if (obtenerSistemaActual(session) != SistemaTransporte.TRANSCARIBE) {
+            return ResponseEntity.status(403)
+                    .body("La configuración de buses está disponible solo para Transcaribe.");
+        }
         busService.crearBusDePrueba();
         return ResponseEntity.ok("Bus de prueba creado exitosamente con sus rutas originales");
     }
@@ -94,6 +103,11 @@ public class BusController {
         try {
             SistemaTransporte sistema = obtenerSistemaActual(session);
             if (sistema == null) {
+                return "redirect:/menu";
+            }
+            if (sistema != SistemaTransporte.TRANSCARIBE) {
+                redirectAttributes.addFlashAttribute("error",
+                        "Las operaciones de buses están disponibles por ahora solo para Transcaribe.");
                 return "redirect:/menu";
             }
             var buses = busRepository.findAll();
@@ -118,7 +132,8 @@ public class BusController {
                         );
 
                         Tarjeta tarjetaUsada = u.getTarjetas().stream()
-                            .filter(t -> t.getNumeroTarjeta().equals(numeroTarjeta))
+                            .filter(t -> t.getNumeroTarjeta().equals(numeroTarjeta)
+                                    && t.getSistemaTransporte() == sistema)
                             .findFirst()
                             .orElse(null);
                         if (tarjetaUsada != null) {

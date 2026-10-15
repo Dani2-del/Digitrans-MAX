@@ -66,6 +66,8 @@ public class ChatController {
                 ? "/conductor/panel" : "/admin/dashboard");
         model.addAttribute("rolParticipante", participante.getRole());
         model.addAttribute("sistemaActual", sistema);
+        model.addAttribute("operacionesConductorDisponibles",
+                sistema == SistemaTransporte.TRANSCARIBE);
         return "chat/sala";
     }
 

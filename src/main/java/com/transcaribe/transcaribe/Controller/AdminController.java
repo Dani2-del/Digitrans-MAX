@@ -355,6 +355,9 @@ public class AdminController {
         if (sistemaActual == null || !sistemaActual.estaDisponible()) {
             return ResponseEntity.badRequest().build();
         }
+        if (sistemaActual == SistemaTransporte.TRANSMILENIO && incluirRutas) {
+            return ResponseEntity.badRequest().build();
+        }
 
         String nombrePredeterminado = switch (tipo) {
             case "anual"   -> "Reporte_" + sistemaActual.getNombre() + "_" + anio + ".xlsx";
@@ -439,6 +442,13 @@ public class AdminController {
             if (!rolesPermitidos.contains(role)) {
                 response.put("status", "error");
                 response.put("message", "El rol seleccionado no es válido.");
+                return ResponseEntity.badRequest().body(response);
+            }
+            if (Usuario.ROLE_CONDUCTOR.equals(role)
+                    && sistemaActual != SistemaTransporte.TRANSCARIBE
+                    && (opt.isEmpty() || !Usuario.ROLE_CONDUCTOR.equals(opt.get().getRole()))) {
+                response.put("status", "error");
+                response.put("message", "El panel de conductor y las operaciones de buses están disponibles solo para Transcaribe.");
                 return ResponseEntity.badRequest().body(response);
             }
             if (Usuario.ROLE_MODERATOR.equals(role)

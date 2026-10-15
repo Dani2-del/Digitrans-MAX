@@ -53,9 +53,10 @@ public class BusService {
         Bus bus = busRepository.findById(busId)
             .orElseThrow(() -> new RuntimeException("Bus no encontrado"));
 
-    if (sistemaTransporte == null || !sistemaTransporte.estaDisponible()) {
-        return "El sistema de transporte seleccionado no está disponible.";
+    if (sistemaTransporte != SistemaTransporte.TRANSCARIBE) {
+        return "Las operaciones de buses están disponibles por ahora solo para Transcaribe.";
     }
+    if (!bus.isActivo()) return "Este bus está inactivo.";
     if (bus.getRutas() == null || bus.getRutas().isEmpty()) {
         return "Este bus no tiene rutas asignadas.";
     }

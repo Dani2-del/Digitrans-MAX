@@ -17,8 +17,8 @@
         </span>
     </a>
     <nav class="conductor-navbar-actions" aria-label="Navegación del conductor">
-        <a th:href="@{/conductor/panel}">Mis rutas</a>
-        <a th:href="@{/conductor/panel(historial=true)}">Historial</a>
+        <a th:if="${operacionesConductorDisponibles}" th:href="@{/conductor/panel}">Mis rutas</a>
+        <a th:if="${operacionesConductorDisponibles}" th:href="@{/conductor/panel(historial=true)}">Historial</a>
         <a th:href="@{/chat}" class="active" aria-current="page">Chat operativo</a>
         <a th:href="@{/menu}" class="conductor-view-switch">Vista usuario</a>
         <form th:action="@{/logout}" method="post">

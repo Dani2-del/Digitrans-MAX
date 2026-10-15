@@ -186,7 +186,10 @@
                 <legend>Secciones del Excel</legend>
                 <label><input type="checkbox" id="incluirUsuarios" checked> Usuarios</label>
                 <label><input type="checkbox" id="incluirTransacciones" checked> Transacciones</label>
-                <label><input type="checkbox" id="incluirRutas"> Historial de rutas de conductores</label>
+                <label th:title="${esTransmilenio ? 'Disponible solo para Transcaribe' : ''}">
+                    <input type="checkbox" id="incluirRutas" th:disabled="${esTransmilenio}">
+                    Historial de rutas de conductores <span th:if="${esTransmilenio}">(solo Transcaribe)</span>
+                </label>
                 <label><input type="checkbox" id="incluirAvisos"> Historial de avisos</label>
             </fieldset>
             <p id="errorSeccionesReporte" class="report-options-error" role="alert" hidden>
