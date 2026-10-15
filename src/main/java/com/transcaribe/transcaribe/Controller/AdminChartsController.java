@@ -104,15 +104,17 @@ public class AdminChartsController {
                 new Document("$sort", new Document("cantidad", -1))
         ), sistemaActual);
 
-        List<ChartPoint> horariosPorEstado = !sistemaActual.tieneRutasConfiguradas()
+        List<ChartPoint> horariosPorEstado = !sistemaActual.permiteGestionConductores()
                 ? List.of() : aggregate("horarios_conductor", List.of(
+                new Document("$match", filtroHorariosSistema(sistemaActual)),
                 new Document("$group", new Document("_id", "$estado")
                         .append("cantidad", new Document("$sum", 1))),
                 new Document("$sort", new Document("cantidad", -1))
         ));
 
-        List<ChartPoint> rutasMasProgramadas = !sistemaActual.tieneRutasConfiguradas()
+        List<ChartPoint> rutasMasProgramadas = !sistemaActual.permiteGestionConductores()
                 ? List.of() : aggregate("horarios_conductor", List.of(
+                new Document("$match", filtroHorariosSistema(sistemaActual)),
                 new Document("$match", new Document("ruta",
                         new Document("$type", "string").append("$ne", ""))),
                 new Document("$group", new Document("_id", "$ruta")
@@ -137,8 +139,9 @@ public class AdminChartsController {
         EstadisticasAdmin stats = new EstadisticasAdmin(
                 mongoTemplate.getCollection("usuarios").countDocuments(filtroUsuariosSistema(sistemaActual)),
                 mongoTemplate.getCollection("transacciones").countDocuments(filtroSistema(sistemaActual)),
-                !sistemaActual.tieneRutasConfiguradas() ? 0L
-                        : mongoTemplate.getCollection("horarios_conductor").countDocuments(),
+                !sistemaActual.permiteGestionConductores() ? 0L
+                        : mongoTemplate.getCollection("horarios_conductor")
+                                .countDocuments(filtroHorariosSistema(sistemaActual)),
                 mongoTemplate.getCollection("avisos_administrativos")
                         .countDocuments(filtroAvisosSistema(sistemaActual)),
                 usuariosPorRol,
@@ -183,6 +186,15 @@ public class AdminChartsController {
     }
 
     private Document filtroAvisosSistema(SistemaTransporte sistemaActual) {
+        if (sistemaActual == SistemaTransporte.TRANSCARIBE) {
+            return new Document("$or", List.of(
+                    new Document("sistema_transporte", SistemaTransporte.TRANSCARIBE.name()),
+                    new Document("sistema_transporte", null)));
+        }
+        return new Document("sistema_transporte", sistemaActual.name());
+    }
+
+    private Document filtroHorariosSistema(SistemaTransporte sistemaActual) {
         if (sistemaActual == SistemaTransporte.TRANSCARIBE) {
             return new Document("$or", List.of(
                     new Document("sistema_transporte", SistemaTransporte.TRANSCARIBE.name()),

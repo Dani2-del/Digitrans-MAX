@@ -89,7 +89,7 @@
             <div th:unless="${#lists.isEmpty(historial)}">
                 <div class="history-row history-header">
                     <div class="history-cell">Conductor</div>
-                    <div class="history-cell">Bus</div>
+                    <div class="history-cell" th:text="${esTransmilenio ? 'Vehículo' : 'Bus'}">Bus</div>
                     <div class="history-cell">Ruta</div>
                     <div class="history-cell">Fecha y horario</div>
                     <div class="history-cell">Estado</div>
@@ -99,7 +99,8 @@
                         <strong th:text="${nombreConductor[h.conductorId] != null ? nombreConductor[h.conductorId] : 'Conductor no disponible'}"></strong>
                     </div>
                     <div class="history-cell">
-                        <span th:text="${busPorHorario[h.id] != null ? busPorHorario[h.id] : (h.busPlaca != null ? h.busPlaca : (busConductor[h.conductorId] != null ? busConductor[h.conductorId] : 'Sin bus asignado'))}"></span>
+                        <span th:if="${esTransmilenio}">No aplica</span>
+                        <span th:unless="${esTransmilenio}" th:text="${busPorHorario[h.id] != null ? busPorHorario[h.id] : (h.busPlaca != null ? h.busPlaca : (busConductor[h.conductorId] != null ? busConductor[h.conductorId] : 'Sin bus asignado'))}"></span>
                     </div>
                     <div class="history-cell">
                         <strong th:text="${h.ruta}"></strong>

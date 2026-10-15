@@ -58,8 +58,8 @@ public class ConductorController {
         boolean esAdmin = Usuario.ROLE_ADMIN.equals(usuario.getRole());
         boolean esModerador = Usuario.ROLE_MODERATOR.equals(usuario.getRole());
         boolean esConductor = Usuario.ROLE_CONDUCTOR.equals(usuario.getRole());
-        boolean esConductorTranscaribe = esConductor
-                && (usuario.getSitm() == null || usuario.getSitm() == SistemaTransporte.TRANSCARIBE);
+        boolean esConductorAsignado = esConductor
+                && (usuario.getSitm() == null || usuario.getSitm().permiteGestionConductores());
 
         // Un usuario normal no tiene nada que elegir, va directo a su menú
         if (!esAdmin && !esModerador && !esConductor) {
@@ -78,7 +78,7 @@ public class ConductorController {
         model.addAttribute("esAdmin", esAdmin);
         model.addAttribute("esModerador", esModerador);
         model.addAttribute("esConductor", esConductor);
-        model.addAttribute("esConductorTranscaribe", esConductorTranscaribe);
+        model.addAttribute("esConductorTranscaribe", esConductorAsignado);
         return "choose-view";
     }
 
@@ -94,23 +94,27 @@ public class ConductorController {
         if (conductor == null) {
             return "redirect:/login";
         }
-        if (!esConductorTranscaribe(conductor)) {
+        if (!esConductorSistema(conductor)) {
             return "redirect:/menu";
         }
 
+        SistemaTransporte sistema = sistemaConductor(conductor);
+
         model.addAttribute("usuario", conductor);
-        model.addAttribute("sistemaActual", SistemaTransporte.TRANSCARIBE);
-        model.addAttribute("alertasAdmin", avisoAdministrativoService.obtenerPendientes(conductor.getId()));
+        model.addAttribute("sistemaActual", sistema);
+        model.addAttribute("esTransmilenio", sistema == SistemaTransporte.TRANSMILENIO);
+        model.addAttribute("alertasAdmin", avisoAdministrativoService.obtenerPendientes(conductor.getId(), sistema));
         model.addAttribute("alertaReturnTo", "/conductor/panel");
 
         Bus bus = null;
-        if (conductor.getBusAsignado() != null) {
+        if (sistema == SistemaTransporte.TRANSCARIBE && conductor.getBusAsignado() != null) {
             bus = busRepository.findById(conductor.getBusAsignado()).orElse(null);
         }
         model.addAttribute("bus", bus);
 
         List<HorarioConductor> horariosConductor =
-                horarioRepository.findByConductorIdOrderByFechaAscHoraInicioAsc(conductor.getId());
+                horarioRepository.findByConductorIdOrderByFechaAscHoraInicioAsc(conductor.getId()).stream()
+                        .filter(h -> h.getSistemaTransporte() == sistema).toList();
         model.addAttribute("horarios", horariosConductor.stream()
                 .filter(h -> HorarioConductor.ESTADO_PENDIENTE.equals(h.getEstado())
                         || HorarioConductor.ESTADO_EN_CURSO.equals(h.getEstado()))
@@ -138,6 +142,9 @@ public class ConductorController {
 
         if ("ok".equals(mensaje)) {
             model.addAttribute("mensaje", "¡Ruta iniciada! Se notificó a " + notificados + " usuario(s).");
+        }
+        if ("servicio".equals(mensaje)) {
+            model.addAttribute("mensaje", "Servicio iniciado correctamente.");
         }
         if ("vuelta".equals(mensaje)) {
             model.addAttribute("mensaje", "La ruta cambió a sentido Vuelta.");
@@ -172,7 +179,7 @@ public class ConductorController {
         if (conductor == null) {
             return "redirect:/login";
         }
-        if (!esConductorTranscaribe(conductor)) {
+        if (!esConductorSistema(conductor)) {
             return "redirect:/menu";
         }
 
@@ -213,7 +220,7 @@ public class ConductorController {
         if (conductor == null) {
             return "redirect:/login";
         }
-        if (!esConductorTranscaribe(conductor)) {
+        if (!esConductorSistema(conductor)) {
             return "redirect:/menu";
         }
 
@@ -230,6 +237,9 @@ public class ConductorController {
         if (horario == null) {
             return "redirect:/conductor/panel?error=horarioinvalido";
         }
+        if (horario.getSistemaTransporte() != sistemaConductor(conductor)) {
+            return "redirect:/conductor/panel?error=horarioinvalido";
+        }
 
         if ("VUELTA".equals(sentidoNormalizado)
                 && HorarioConductor.ESTADO_EN_CURSO.equals(horario.getEstado())
@@ -244,16 +254,15 @@ public class ConductorController {
             return "redirect:/conductor/panel?error=estadoinvalido";
         }
 
+        int notificados = 0;
         String busId = obtenerBusId(horario, conductor);
         if (busId == null || busId.isBlank()) {
             return "redirect:/conductor/panel?error=sinbus";
         }
-
         Bus bus = busRepository.findById(busId).orElse(null);
-        if (bus == null) {
+        if (bus == null || bus.getSistemaTransporte() != sistemaConductor(conductor)) {
             return "redirect:/conductor/panel?error=sinbus";
         }
-
         boolean busOcupado = horarioRepository.findAll().stream()
                 .anyMatch(otro -> !horario.getId().equals(otro.getId())
                         && busId.equals(obtenerBusId(otro, null))
@@ -261,14 +270,17 @@ public class ConductorController {
         if (busOcupado) {
             return "redirect:/conductor/panel?error=busocupado";
         }
+        if (sistemaConductor(conductor) == SistemaTransporte.TRANSCARIBE) {
+            notificados = rutaNotificacionService.notificarInicioRuta(horario, bus.getPlaca());
+        }
 
         horario.setSentido("IDA");
         horario.setEstado(HorarioConductor.ESTADO_EN_CURSO);
         horarioRepository.save(horario);
 
-        int notificados = rutaNotificacionService.notificarInicioRuta(horario, bus.getPlaca());
-
-        return "redirect:/conductor/panel?mensaje=ok&notificados=" + notificados;
+        return sistemaConductor(conductor) == SistemaTransporte.TRANSMILENIO
+                ? "redirect:/conductor/panel?mensaje=servicio"
+                : "redirect:/conductor/panel?mensaje=ok&notificados=" + notificados;
     }
 
     @PostMapping("/conductor/terminar-ruta")
@@ -278,13 +290,16 @@ public class ConductorController {
         if (conductor == null) {
             return "redirect:/login";
         }
-        if (!esConductorTranscaribe(conductor)) {
+        if (!esConductorSistema(conductor)) {
             return "redirect:/menu";
         }
 
         HorarioConductor horario = horarioRepository.findByIdAndConductorId(horarioId, conductor.getId()).orElse(null);
 
         if (horario == null) {
+            return "redirect:/conductor/panel?error=horarioinvalido";
+        }
+        if (horario.getSistemaTransporte() != sistemaConductor(conductor)) {
             return "redirect:/conductor/panel?error=horarioinvalido";
         }
 
@@ -310,8 +325,12 @@ public class ConductorController {
         return conductor == null ? null : conductor.getBusAsignado();
     }
 
-    private boolean esConductorTranscaribe(Usuario usuario) {
+    private SistemaTransporte sistemaConductor(Usuario usuario) {
+        return usuario.getSitm() == null ? SistemaTransporte.TRANSCARIBE : usuario.getSitm();
+    }
+
+    private boolean esConductorSistema(Usuario usuario) {
         return usuario != null && Usuario.ROLE_CONDUCTOR.equals(usuario.getRole())
-                && (usuario.getSitm() == null || usuario.getSitm() == SistemaTransporte.TRANSCARIBE);
+                && sistemaConductor(usuario).permiteGestionConductores();
     }
 }

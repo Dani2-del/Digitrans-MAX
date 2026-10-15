@@ -66,6 +66,13 @@ public class CatalogoRutasTransmilenioService {
         return rutasActivas;
     }
 
+    public Optional<RutaTransmilenio> buscarPorEtiqueta(String etiqueta) {
+        if (etiqueta == null) return Optional.empty();
+        return rutasActivas.stream()
+                .filter(ruta -> ruta.getEtiqueta().equals(etiqueta))
+                .findFirst();
+    }
+
     public Optional<RutaTransmilenio> obtenerRutaAleatoria() {
         if (rutasActivas.isEmpty()) return Optional.empty();
         int indice = ThreadLocalRandom.current().nextInt(rutasActivas.size());

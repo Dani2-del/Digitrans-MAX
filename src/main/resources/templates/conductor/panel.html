@@ -1,20 +1,20 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-  <link rel="stylesheet" th:href="@{/css/conductor.css}" />
+  <link rel="stylesheet" th:href="@{/css/conductor.css(v=20261015-1)}" />
   <link rel="stylesheet" th:href="@{/css/avisos.css}" />
   <meta charset="UTF-8" />
   <title>Panel Conductor - Digitrans</title>
     <th:block th:replace="~{fragments/loading-indicator :: styles}"></th:block>
 </head>
-<body>
+<body th:attr="data-sistema=${sistemaActual}">
   <div class="page conductor-page">
   <header class="navbar conductor-navbar">
     <div class="conductor-navbar-brand">
       <img src="/images/digitrans-mark.svg" alt="" class="logo">
       <div>
         <span class="conductor-brand-title">Digitrans</span>
-        <span class="conductor-brand-subtitle">Transcaribe · Panel de conductor</span>
+        <span class="conductor-brand-subtitle" th:text="${sistemaActual.nombre + ' - Panel de conductor'}">Transcaribe · Panel de conductor</span>
       </div>
     </div>
     <nav class="conductor-navbar-actions" aria-label="Navegación del conductor">

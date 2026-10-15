@@ -19,6 +19,9 @@ public class HorarioConductor {
     @Field("bus_id")
     private String busId;
 
+    @Field("sistema_transporte")
+    private SistemaTransporte sistemaTransporte = SistemaTransporte.TRANSCARIBE;
+
     @Field("bus_placa")
     private String busPlaca;
 
@@ -71,6 +74,13 @@ public class HorarioConductor {
 
     public String getBusId() { return busId; }
     public void setBusId(String busId) { this.busId = busId; }
+
+    public SistemaTransporte getSistemaTransporte() {
+        return sistemaTransporte == null ? SistemaTransporte.TRANSCARIBE : sistemaTransporte;
+    }
+    public void setSistemaTransporte(SistemaTransporte sistemaTransporte) {
+        this.sistemaTransporte = sistemaTransporte;
+    }
 
     public String getBusPlaca() { return busPlaca; }
     public void setBusPlaca(String busPlaca) { this.busPlaca = busPlaca; }

@@ -133,7 +133,9 @@ public class BusController {
                 }
                 resultado = busService.simularViajeTransmilenio(usuarioId, numeroTarjeta, ruta);
             } else {
-                var buses = busRepository.findAll();
+                var buses = busRepository.findAll().stream()
+                        .filter(bus -> bus.getSistemaTransporte() == SistemaTransporte.TRANSCARIBE)
+                        .toList();
                 if (buses.isEmpty()) {
                     redirectAttributes.addFlashAttribute("error", "No hay buses configurados. Ejecuta el setup primero.");
                     return "redirect:/menu";

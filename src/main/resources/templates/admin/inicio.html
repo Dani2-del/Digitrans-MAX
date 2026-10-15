@@ -54,16 +54,16 @@
                 </a>
 
                 <a class="admin-module-card schedules-module"
-                   th:href="${tieneRutasConfiguradas ? '/admin/horarios' : null}"
-                   th:classappend="${!tieneRutasConfiguradas ? ' module-unavailable' : ''}"
-                   th:attr="aria-disabled=${!tieneRutasConfiguradas}, tabindex=${!tieneRutasConfiguradas ? -1 : 0}"
-                   th:title="${!tieneRutasConfiguradas ? 'Próximamente para ' + sistemaActual.nombre : ''}">
+                   th:href="${permiteGestionConductores ? '/admin/horarios' : null}"
+                   th:classappend="${!permiteGestionConductores ? ' module-unavailable' : ''}"
+                   th:attr="aria-disabled=${!permiteGestionConductores}, tabindex=${!permiteGestionConductores ? -1 : 0}"
+                   th:title="${!permiteGestionConductores ? 'Próximamente para ' + sistemaActual.nombre : ''}">
                     <span class="admin-module-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24"><path d="M5 17h14l1-8a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3l1 8Z"/><path d="M5 12h14M7 17v2m10-2v2"/><circle cx="8" cy="14.5" r=".75"/><circle cx="16" cy="14.5" r=".75"/></svg>
                     </span>
                     <span class="admin-module-title">Horarios de conductores</span>
                     <span class="admin-module-description">Programa rutas y consulta horarios.</span>
-                    <span class="admin-module-link" th:text="${!tieneRutasConfiguradas ? 'Próximamente' : 'Abrir sección →'}">Abrir sección →</span>
+                    <span class="admin-module-link" th:text="${!permiteGestionConductores ? 'Próximamente' : 'Abrir sección →'}">Abrir sección →</span>
                 </a>
 
                 <a class="admin-module-card announcements-module" href="/admin/avisos">
@@ -186,9 +186,9 @@
                 <legend>Secciones del Excel</legend>
                 <label><input type="checkbox" id="incluirUsuarios" checked> Usuarios</label>
                 <label><input type="checkbox" id="incluirTransacciones" checked> Transacciones</label>
-                <label th:title="${!tieneRutasConfiguradas ? 'Disponible solo para Transcaribe' : ''}">
-                    <input type="checkbox" id="incluirRutas" th:disabled="${!tieneRutasConfiguradas}">
-                    Historial de rutas de conductores <span th:if="${!tieneRutasConfiguradas}">(solo Transcaribe)</span>
+                <label th:title="${!permiteGestionConductores ? 'Próximamente para ' + sistemaActual.nombre : ''}">
+                    <input type="checkbox" id="incluirRutas" th:disabled="${!permiteGestionConductores}">
+                    Historial de rutas de conductores <span th:if="${!permiteGestionConductores}">(próximamente)</span>
                 </label>
                 <label><input type="checkbox" id="incluirAvisos"> Historial de avisos</label>
             </fieldset>

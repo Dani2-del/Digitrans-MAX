@@ -59,9 +59,13 @@ public class AdminSistemaInterceptor implements HandlerInterceptor {
                                                 HttpServletResponse response,
                                                 SistemaTransporte sistema) throws java.io.IOException {
         String ruta = request.getRequestURI().substring(request.getContextPath().length());
-        boolean herramientaEnPreparacion = ruta.startsWith("/admin/horarios")
-                || ruta.equals("/admin/mapa-rutas/editar");
-        if (!sistema.tieneRutasConfiguradas() && herramientaEnPreparacion) {
+        boolean gestionConductores = ruta.equals("/admin/horarios")
+                || (ruta.startsWith("/admin/horarios/") && !ruta.startsWith("/admin/horarios/buses"));
+        boolean gestionBuses = ruta.startsWith("/admin/horarios/buses");
+        boolean mapaEnPreparacion = ruta.equals("/admin/mapa-rutas/editar");
+        if ((gestionConductores && !sistema.permiteGestionConductores())
+                || (gestionBuses && !sistema.permiteGestionConductores())
+                || (mapaEnPreparacion && !sistema.tieneRutasConfiguradas())) {
             response.sendRedirect(request.getContextPath() + "/admin/dashboard?funcion=proximamente");
             return false;
         }

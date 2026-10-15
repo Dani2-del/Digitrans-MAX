@@ -23,7 +23,7 @@
         <div class="card">
             <div class="header-row">
                 <div>
-                    <h2 style="margin-bottom: 5px;">📅 Programar ruta</h2>
+                    <h2 style="margin-bottom: 5px;" th:text="${esTransmilenio ? 'Programar bus y servicio TransMilenio' : 'Programar ruta'}">Programar ruta</h2>
                     <p style="margin-top: 0; color: #718096;">Programa la ruta, fecha y horario de cada conductor.</p>
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">

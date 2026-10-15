@@ -25,6 +25,9 @@ public class Bus {
     @Field("tipo")
     private String tipo = TIPO_TRONCAL;
 
+    @Field("sistema_transporte")
+    private SistemaTransporte sistemaTransporte = SistemaTransporte.TRANSCARIBE;
+
     @Field("rutas_disponibles")
     private List<String> rutas;
 
@@ -41,6 +44,12 @@ public class Bus {
         this.placa = placa;
         this.rutas = rutas;
         this.tipo = normalizarTipo(tipo);
+    }
+
+    public Bus(String placa, List<String> rutas, String tipo, SistemaTransporte sistemaTransporte) {
+        this(placa, rutas, tipo);
+        this.sistemaTransporte = sistemaTransporte == null
+                ? SistemaTransporte.TRANSCARIBE : sistemaTransporte;
     }
 
     public String getId() {
@@ -78,6 +87,12 @@ public class Bus {
     public List<String> getRutas() { return rutas; }
     public String getPlaca() { return placa; }
     public String getTipo() { return tipo; }
+    public SistemaTransporte getSistemaTransporte() {
+        return sistemaTransporte == null ? SistemaTransporte.TRANSCARIBE : sistemaTransporte;
+    }
+    public void setSistemaTransporte(SistemaTransporte sistemaTransporte) {
+        this.sistemaTransporte = sistemaTransporte;
+    }
 
     public static String normalizarTipo(String tipo) {
         if (tipo == null || tipo.trim().isEmpty()) {

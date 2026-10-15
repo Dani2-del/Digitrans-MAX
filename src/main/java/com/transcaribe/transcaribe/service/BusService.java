@@ -57,6 +57,7 @@ public class BusService {
     if (sistemaTransporte != SistemaTransporte.TRANSCARIBE) {
         return "Las operaciones de buses están disponibles por ahora solo para Transcaribe.";
     }
+    if (bus.getSistemaTransporte() != sistemaTransporte) return "Este bus pertenece a otro servicio.";
     if (!bus.isActivo()) return "Este bus está inactivo.";
     if (bus.getRutas() == null || bus.getRutas().isEmpty()) {
         return "Este bus no tiene rutas asignadas.";
@@ -136,6 +137,7 @@ public class BusService {
 
     public List<String> obtenerTodasLasRutas() {
         return busRepository.findAll().stream()
+                .filter(bus -> bus.getSistemaTransporte() == SistemaTransporte.TRANSCARIBE)
                 .filter(Bus::isActivo)
                 .filter(b -> b.getRutas() != null)
                 .flatMap(b -> b.getRutas().stream())

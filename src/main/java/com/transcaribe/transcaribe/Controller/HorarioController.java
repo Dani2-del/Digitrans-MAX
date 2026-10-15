@@ -3,10 +3,13 @@ package com.transcaribe.transcaribe.Controller;
 import com.transcaribe.transcaribe.Model.Bus;
 import com.transcaribe.transcaribe.Model.HorarioConductor;
 import com.transcaribe.transcaribe.Model.Usuario;
+import com.transcaribe.transcaribe.Model.SistemaTransporte;
 import com.transcaribe.transcaribe.Repository.BusRepository;
 import com.transcaribe.transcaribe.Repository.HorarioConductorRepository;
 import com.transcaribe.transcaribe.Repository.UsuarioRepository;
 import com.transcaribe.transcaribe.service.EmailService;
+import com.transcaribe.transcaribe.service.CatalogoRutasTransmilenioService;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -40,9 +43,19 @@ public class HorarioController {
 
     @Autowired
     private EmailService emailService;
+
+    @Autowired
+    private CatalogoRutasTransmilenioService catalogoRutasTransmilenioService;
  
     @GetMapping
-    public String menuHorarios() {
+    public String menuHorarios(Model model, HttpSession session,
+                               org.springframework.security.core.Authentication authentication) {
+        SistemaTransporte sistema = sistemaActual(session);
+        model.addAttribute("sistemaActual", sistema);
+        model.addAttribute("esTransmilenio", sistema == SistemaTransporte.TRANSMILENIO);
+        boolean esModerador = authentication != null && usuarioRepository.findByCorreo(authentication.getName())
+                .map(usuario -> Usuario.ROLE_MODERATOR.equals(usuario.getRole())).orElse(false);
+        model.addAttribute("esModerador", esModerador);
         return "admin/horarios";
     }
 
@@ -52,9 +65,12 @@ public class HorarioController {
                               @RequestParam(defaultValue = "") String periodo,
                               @RequestParam(required = false) String fechaFiltro,
                               @RequestParam(defaultValue = "0") int page,
-                              Model model) {
-        List<Usuario> conductores = usuarioRepository.findByRoleAndActivoTrue(Usuario.ROLE_CONDUCTOR);
-        List<Bus> buses = busRepository.findAll();
+                              Model model, HttpSession session) {
+        SistemaTransporte sistema = sistemaActual(session);
+        List<Usuario> conductores = usuarioRepository.findByRoleAndActivoTrue(Usuario.ROLE_CONDUCTOR)
+                .stream().filter(c -> perteneceAlSistema(c, sistema)).toList();
+        List<Bus> buses = busRepository.findAll().stream()
+                .filter(bus -> bus.getSistemaTransporte() == sistema && bus.isActivo()).toList();
  
         Map<String, String> nombreConductor = new HashMap<>();
         for (Usuario c : conductores) {
@@ -68,8 +84,19 @@ public class HorarioController {
 
         model.addAttribute("conductores", conductores);
         model.addAttribute("buses", buses);
+        model.addAttribute("sistemaActual", sistema);
+        model.addAttribute("esTransmilenio", sistema == SistemaTransporte.TRANSMILENIO);
+        List<String> rutasDisponibles = sistema == SistemaTransporte.TRANSMILENIO
+                ? catalogoRutasTransmilenioService.obtenerRutasActivas().stream()
+                        .map(com.transcaribe.transcaribe.Model.RutaTransmilenio::getEtiqueta).toList()
+                : busRepository.findAll().stream()
+                        .filter(bus -> bus.getSistemaTransporte() == sistema)
+                        .filter(bus -> bus.getRutas() != null)
+                        .flatMap(bus -> bus.getRutas().stream()).distinct().sorted().toList();
+        model.addAttribute("rutasDisponibles", rutasDisponibles);
         List<HorarioConductor> horariosActivos = horarioRepository.findAllByOrderByFechaDescHoraInicioDesc()
                 .stream()
+                .filter(h -> h.getSistemaTransporte() == sistema)
                 .filter(h -> !HorarioConductor.ESTADO_DESACTIVADA.equals(h.getEstado()))
                 .toList();
         LocalDate fechaReferencia = parseFecha(fechaFiltro);
@@ -100,8 +127,13 @@ public class HorarioController {
     public String verBuses(@RequestParam(defaultValue = "") String buscarBus,
                            @RequestParam(defaultValue = "") String tipoBus,
                            @RequestParam(defaultValue = "0") int busPage,
-                           Model model) {
+                           Model model, HttpSession session,
+                           org.springframework.security.core.Authentication authentication) {
+        SistemaTransporte sistema = sistemaActual(session);
+        boolean esModerador = authentication != null && usuarioRepository.findByCorreo(authentication.getName())
+                .map(usuario -> Usuario.ROLE_MODERATOR.equals(usuario.getRole())).orElse(false);
         List<Bus> busesFiltrados = busRepository.findAll().stream()
+                .filter(bus -> bus.getSistemaTransporte() == sistema)
                 .filter(bus -> buscarBus.isBlank() || (bus.getPlaca() != null
                         && bus.getPlaca().toLowerCase().contains(buscarBus.trim().toLowerCase())))
                 .filter(bus -> tipoBus.isBlank() || (bus.getTipo() != null
@@ -113,6 +145,17 @@ public class HorarioController {
         int hasta = Math.min(desde + 5, busesFiltrados.size());
 
         model.addAttribute("busesRegistrados", busesFiltrados.subList(desde, hasta));
+        model.addAttribute("sistemaActual", sistema);
+        model.addAttribute("esTransmilenio", sistema == SistemaTransporte.TRANSMILENIO);
+        model.addAttribute("esModerador", esModerador);
+        List<String> rutasDisponibles = sistema == SistemaTransporte.TRANSMILENIO
+                ? catalogoRutasTransmilenioService.obtenerRutasActivas().stream()
+                        .map(com.transcaribe.transcaribe.Model.RutaTransmilenio::getEtiqueta).toList()
+                : busRepository.findAll().stream()
+                        .filter(bus -> bus.getSistemaTransporte() == sistema)
+                        .filter(bus -> bus.getRutas() != null)
+                        .flatMap(bus -> bus.getRutas().stream()).distinct().sorted().toList();
+        model.addAttribute("rutasDisponibles", rutasDisponibles);
         model.addAttribute("buscarBus", buscarBus);
         model.addAttribute("tipoBusSeleccionado", tipoBus);
         model.addAttribute("currentBusPage", paginaSegura);
@@ -142,8 +185,10 @@ public class HorarioController {
                                @RequestParam(required = false) String fechaDesde,
                                @RequestParam(required = false) String fechaHasta,
                                @RequestParam(defaultValue = "0") int page,
-                               Model model) {
-        List<Usuario> conductores = usuarioRepository.findByRoleAndActivoTrue(Usuario.ROLE_CONDUCTOR);
+                               Model model, HttpSession session) {
+        SistemaTransporte sistema = sistemaActual(session);
+        List<Usuario> conductores = usuarioRepository.findByRoleAndActivoTrue(Usuario.ROLE_CONDUCTOR)
+                .stream().filter(c -> perteneceAlSistema(c, sistema)).toList();
         List<HorarioConductor> historial = horarioRepository.findAllByOrderByFechaAscHoraInicioAsc();
         LocalDate desde = parseFecha(fechaDesde);
         LocalDate hasta = parseFecha(fechaHasta);
@@ -160,6 +205,7 @@ public class HorarioController {
 
         String rutaFiltro = ruta == null ? "" : ruta.trim().toLowerCase();
         List<HorarioConductor> horariosFiltrados = historial.stream()
+                .filter(h -> h.getSistemaTransporte() == sistema)
                 .filter(h -> conductorId == null || conductorId.isBlank() || conductorId.equals(h.getConductorId()))
                 .filter(h -> rutaFiltro.isEmpty() || (h.getRuta() != null && h.getRuta().toLowerCase().contains(rutaFiltro)))
                 .filter(h -> desde == null || (h.getFecha() != null && !h.getFecha().isBefore(desde)))
@@ -200,6 +246,8 @@ public class HorarioController {
         }
 
         model.addAttribute("conductores", conductores);
+        model.addAttribute("sistemaActual", sistema);
+        model.addAttribute("esTransmilenio", sistema == SistemaTransporte.TRANSMILENIO);
         model.addAttribute("historial", horariosPagina);
         model.addAttribute("nombreConductor", nombreConductor);
         model.addAttribute("busConductor", busConductor);
@@ -242,8 +290,52 @@ public class HorarioController {
         return new ArrayList<>(bus.getRutas());
     }
 
+    private List<String> rutasDelHorario(HorarioConductor horario) {
+        String busId = horario.getBusId();
+        if (busId != null && !busId.isBlank()) {
+            Bus bus = busRepository.findById(busId).orElse(null);
+            if (bus != null && bus.getRutas() != null) return new ArrayList<>(bus.getRutas());
+        }
+        Usuario conductor = usuarioRepository.findById(horario.getConductorId()).orElse(null);
+        if (conductor != null) return rutasDelConductor(conductor);
+        return new ArrayList<>();
+    }
+
     private boolean seSolapan(LocalTime inicio, LocalTime fin, LocalTime otroInicio, LocalTime otroFin) {
+        if (inicio == null || fin == null || otroInicio == null || otroFin == null) return false;
         return inicio.isBefore(otroFin) && otroInicio.isBefore(fin);
+    }
+
+    private boolean conductorTieneHorarioSolapado(String conductorId, LocalDate fecha,
+                                                   LocalTime inicio, LocalTime fin,
+                                                   String horarioExcluido, SistemaTransporte sistema) {
+        if (fecha == null || inicio == null || fin == null) return false;
+        return horarioRepository.findAll().stream()
+                .filter(h -> conductorId.equals(h.getConductorId()))
+                .filter(h -> h.getSistemaTransporte() == sistema && fecha.equals(h.getFecha()))
+                .filter(h -> horarioExcluido == null || !horarioExcluido.equals(h.getId()))
+                .filter(h -> !HorarioConductor.ESTADO_FINALIZADA.equals(h.getEstado())
+                        && !HorarioConductor.ESTADO_DESACTIVADA.equals(h.getEstado()))
+                .anyMatch(h -> seSolapan(inicio, fin, h.getHoraInicio(), h.getHoraFin()));
+    }
+
+    private SistemaTransporte sistemaActual(HttpSession session) {
+        Object valor = session.getAttribute(SistemaTransporte.SESSION_ATTRIBUTE);
+        return valor instanceof SistemaTransporte sistema && sistema.estaDisponible() ? sistema : null;
+    }
+
+    private boolean perteneceAlSistema(Usuario conductor, SistemaTransporte sistema) {
+        SistemaTransporte asignado = conductor.getSitm() == null
+                ? SistemaTransporte.TRANSCARIBE : conductor.getSitm();
+        return sistema != null && asignado == sistema;
+    }
+
+    private LocalTime parseHora(String hora) {
+        try {
+            return hora == null ? null : LocalTime.parse(hora);
+        } catch (java.time.format.DateTimeParseException e) {
+            return null;
+        }
     }
 
     private String busIdDelHorario(HorarioConductor horario) {
@@ -267,20 +359,23 @@ public class HorarioController {
  
     @PostMapping("/crear")
     public String crearHorario(@RequestParam String conductorId,
-    @RequestParam String busId,
+    @RequestParam(required = false) String busId,
     @RequestParam String ruta,
                                 @RequestParam String fecha,
                                 @RequestParam String horaInicio,
                                 @RequestParam String horaFin,
-                                RedirectAttributes redirectAttributes) {
+                                RedirectAttributes redirectAttributes, HttpSession session) {
+        SistemaTransporte sistema = sistemaActual(session);
         Usuario conductor = usuarioRepository.findById(conductorId).orElse(null);
-        if (conductor == null || !Usuario.ROLE_CONDUCTOR.equals(conductor.getRole())) {
+        if (conductor == null || !Usuario.ROLE_CONDUCTOR.equals(conductor.getRole())
+                || !perteneceAlSistema(conductor, sistema)) {
             redirectAttributes.addFlashAttribute("error", "El conductor seleccionado no existe.");
             return "redirect:/admin/horarios/programar";
         }
 
-        Bus bus = busRepository.findById(busId).orElse(null);
-        if (bus == null || !bus.isActivo()) {
+        Bus bus = busId != null && !busId.isBlank()
+                ? busRepository.findById(busId).orElse(null) : null;
+        if (bus == null || !bus.isActivo() || bus.getSistemaTransporte() != sistema) {
             redirectAttributes.addFlashAttribute("error", "El bus seleccionado no existe o está inactivo.");
             return "redirect:/admin/horarios/programar";
         }
@@ -300,6 +395,19 @@ public class HorarioController {
             redirectAttributes.addFlashAttribute("error", "La hora de inicio debe ser anterior a la hora de fin.");
             return "redirect:/admin/horarios/programar";
         }
+        if (sistema == SistemaTransporte.TRANSMILENIO) {
+            ruta = catalogoRutasTransmilenioService.buscarPorEtiqueta(ruta.trim())
+                    .map(com.transcaribe.transcaribe.Model.RutaTransmilenio::getEtiqueta).orElse(null);
+            if (ruta == null) {
+                redirectAttributes.addFlashAttribute("error", "Selecciona un servicio troncal válido de TransMilenio.");
+                return "redirect:/admin/horarios/programar";
+            }
+            if (conductorTieneHorarioSolapado(conductorId, parseFecha(fecha), parseHora(horaInicio),
+                    parseHora(horaFin), null, sistema)) {
+                redirectAttributes.addFlashAttribute("error", "El conductor ya tiene un horario asignado en ese rango.");
+                return "redirect:/admin/horarios/programar";
+            }
+        }
         if (bus.getRutas() == null || !bus.getRutas().contains(ruta.trim())) {
             redirectAttributes.addFlashAttribute("error", "La ruta seleccionada no pertenece al bus elegido.");
             return "redirect:/admin/horarios/programar";
@@ -312,12 +420,13 @@ public class HorarioController {
  
         HorarioConductor horario = new HorarioConductor(
                 conductorId,
-                busId,
+                bus.getId(),
                 ruta.trim(),
                 fechaProgramada,
                 inicio,
                 fin
         );
+        horario.setSistemaTransporte(sistema);
         horario.setBusPlaca(bus.getPlaca());
  
         horarioRepository.save(horario);
@@ -335,55 +444,62 @@ public class HorarioController {
     }
 
     @GetMapping("/editar/{id}")
-    public String formularioEditarHorario(@PathVariable String id, Model model, RedirectAttributes redirectAttributes) {
+    public String formularioEditarHorario(@PathVariable String id, Model model,
+                                          RedirectAttributes redirectAttributes, HttpSession session) {
+        SistemaTransporte sistema = sistemaActual(session);
         HorarioConductor horario = horarioRepository.findById(id).orElse(null);
-        if (horario == null) {
+        if (horario == null || horario.getSistemaTransporte() != sistema) {
             redirectAttributes.addFlashAttribute("error", "El horario que intentas editar no existe.");
             return "redirect:/admin/horarios/programar";
         }
 
         Usuario conductor = usuarioRepository.findById(horario.getConductorId()).orElse(null);
-        if (conductor == null) {
+        if (conductor == null || !perteneceAlSistema(conductor, sistema)) {
             redirectAttributes.addFlashAttribute("error", "El conductor de este horario ya no está disponible.");
             return "redirect:/admin/horarios/programar";
         }
 
-        List<String> rutas = rutasDelConductor(conductor);
+        List<String> rutas = rutasDelHorario(horario);
         model.addAttribute("horario", horario);
         model.addAttribute("conductor", conductor);
         model.addAttribute("rutas", rutas);
-        List<Bus> buses = busRepository.findAll();
+        List<Bus> buses = busRepository.findAll().stream()
+                .filter(bus -> bus.getSistemaTransporte() == sistema && bus.isActivo()).toList();
         model.addAttribute("buses", buses);
         Map<String, List<String>> busRutasPorId = new HashMap<>();
         buses.forEach(bus -> busRutasPorId.put(bus.getId(),
                 bus.getRutas() == null ? new ArrayList<>() : bus.getRutas()));
         model.addAttribute("busRutasPorId", busRutasPorId);
         model.addAttribute("busSeleccionadoId", busIdDelHorario(horario));
+        model.addAttribute("esTransmilenio", sistema == SistemaTransporte.TRANSMILENIO);
+        model.addAttribute("sistemaActual", sistema);
         return "admin/editar-horario";
     }
 
     @PostMapping("/editar")
     public String editarHorario(@RequestParam String id,
-    @RequestParam String busId,
+    @RequestParam(required = false) String busId,
     @RequestParam String ruta,
                                  @RequestParam String fecha,
                                  @RequestParam String horaInicio,
                                  @RequestParam String horaFin,
-                                 RedirectAttributes redirectAttributes) {
+                                 RedirectAttributes redirectAttributes, HttpSession session) {
+        SistemaTransporte sistema = sistemaActual(session);
         HorarioConductor horario = horarioRepository.findById(id).orElse(null);
-        if (horario == null) {
+        if (horario == null || horario.getSistemaTransporte() != sistema) {
             redirectAttributes.addFlashAttribute("error", "El horario que intentas editar no existe.");
             return "redirect:/admin/horarios/programar";
         }
 
         Usuario conductor = usuarioRepository.findById(horario.getConductorId()).orElse(null);
-        if (conductor == null) {
+        if (conductor == null || !perteneceAlSistema(conductor, sistema)) {
             redirectAttributes.addFlashAttribute("error", "El conductor de este horario ya no está disponible.");
             return "redirect:/admin/horarios/programar";
         }
 
-        Bus bus = busRepository.findById(busId).orElse(null);
-        if (bus == null || !bus.isActivo()) {
+        Bus bus = busId != null && !busId.isBlank()
+                ? busRepository.findById(busId).orElse(null) : null;
+        if (bus == null || !bus.isActivo() || bus.getSistemaTransporte() != sistema) {
             redirectAttributes.addFlashAttribute("error", "El bus seleccionado no existe o está inactivo.");
             return "redirect:/admin/horarios/programar";
         }
@@ -402,6 +518,19 @@ public class HorarioController {
             redirectAttributes.addFlashAttribute("error", "La hora de inicio debe ser anterior a la hora de fin.");
             return "redirect:/admin/horarios/programar";
         }
+        if (sistema == SistemaTransporte.TRANSMILENIO) {
+            ruta = catalogoRutasTransmilenioService.buscarPorEtiqueta(ruta.trim())
+                    .map(com.transcaribe.transcaribe.Model.RutaTransmilenio::getEtiqueta).orElse(null);
+            if (ruta == null) {
+                redirectAttributes.addFlashAttribute("error", "Selecciona una ruta troncal válida de TransMilenio.");
+                return "redirect:/admin/horarios/programar";
+            }
+            if (conductorTieneHorarioSolapado(conductor.getId(), fechaProgramada, inicio, fin,
+                    horario.getId(), sistema)) {
+                redirectAttributes.addFlashAttribute("error", "El conductor ya tiene otro horario en ese rango.");
+                return "redirect:/admin/horarios/programar";
+            }
+        }
         if (bus.getRutas() == null || !bus.getRutas().contains(ruta.trim())) {
             redirectAttributes.addFlashAttribute("error", "La ruta seleccionada no pertenece al bus elegido.");
             return "redirect:/admin/horarios/programar";
@@ -413,7 +542,8 @@ public class HorarioController {
         }
  
         horario.setRuta(ruta.trim());
-        horario.setBusId(busId);
+        horario.setSistemaTransporte(sistema);
+        horario.setBusId(bus.getId());
         horario.setBusPlaca(bus.getPlaca());
         horario.setFecha(fechaProgramada);
         horario.setHoraInicio(inicio);
@@ -434,9 +564,11 @@ public class HorarioController {
     }
  
     @PostMapping("/eliminar")
-    public String eliminarHorario(@RequestParam String id, RedirectAttributes redirectAttributes) {
+    public String eliminarHorario(@RequestParam String id, RedirectAttributes redirectAttributes,
+                                  HttpSession session) {
+        SistemaTransporte sistema = sistemaActual(session);
         HorarioConductor horario = horarioRepository.findById(id).orElse(null);
-        if (horario == null) {
+        if (horario == null || horario.getSistemaTransporte() != sistema) {
             redirectAttributes.addFlashAttribute("error", "El horario que intentas desactivar no existe.");
             return "redirect:/admin/horarios/programar";
         }
@@ -457,24 +589,35 @@ public class HorarioController {
 
     @PostMapping("/buses/crear")
     public String crearBus(@RequestParam String placa,
-                            @RequestParam(required = false) String rutas,
+                            @RequestParam(required = false) List<String> rutas,
                             @RequestParam(defaultValue = "TRONCAL", required = false) String tipo,
-                            RedirectAttributes redirectAttributes) {
+                            RedirectAttributes redirectAttributes, HttpSession session) {
+        SistemaTransporte sistema = sistemaActual(session);
  
         String placaLimpia = placa.trim().toUpperCase();
  
-        if (busRepository.findByPlaca(placaLimpia).isPresent()) {
+        if (placaLimpia.isBlank() || busRepository.findByPlaca(placaLimpia).isPresent()) {
             redirectAttributes.addFlashAttribute("error", "Ya existe un bus registrado con la placa " + placaLimpia + " ❌");
             return "redirect:/admin/horarios/buses";
         }
  
-        String rutasTexto = rutas == null ? "" : rutas;
-        List<String> listaRutas = Arrays.stream(rutasTexto.split(","))
+        List<String> listaRutas = (rutas == null ? List.<String>of() : rutas).stream()
+                .flatMap(valor -> Arrays.stream(valor.split(",")))
                 .map(String::trim)
                 .filter(r -> !r.isEmpty())
                 .collect(Collectors.toList());
 
-        Bus nuevoBus = new Bus(placaLimpia, listaRutas, tipo);
+        if (sistema == SistemaTransporte.TRANSMILENIO) {
+            List<String> rutasValidas = catalogoRutasTransmilenioService.obtenerRutasActivas().stream()
+                    .map(com.transcaribe.transcaribe.Model.RutaTransmilenio::getEtiqueta).toList();
+            if (listaRutas.isEmpty() || !rutasValidas.containsAll(listaRutas)) {
+                redirectAttributes.addFlashAttribute("error", "Selecciona al menos un servicio troncal válido.");
+                return "redirect:/admin/horarios/buses";
+            }
+            tipo = Bus.TIPO_TRONCAL;
+        }
+
+        Bus nuevoBus = new Bus(placaLimpia, listaRutas, tipo, sistema);
         busRepository.save(nuevoBus);
  
         redirectAttributes.addFlashAttribute("mensaje", "Bus " + placaLimpia + " registrado correctamente ✅");
@@ -482,9 +625,11 @@ public class HorarioController {
     }
  
     @PostMapping("/buses/eliminar")
-    public String eliminarBus(@RequestParam String id, RedirectAttributes redirectAttributes) {
+    public String eliminarBus(@RequestParam String id, RedirectAttributes redirectAttributes,
+                              HttpSession session) {
+        SistemaTransporte sistema = sistemaActual(session);
         Bus bus = busRepository.findById(id).orElse(null);
-        if (bus == null) {
+        if (bus == null || bus.getSistemaTransporte() != sistema) {
             redirectAttributes.addFlashAttribute("error", "El bus que intentas eliminar ya no existe.");
             return "redirect:/admin/horarios/buses";
         }
@@ -529,12 +674,13 @@ public class HorarioController {
     @PostMapping("/buses/editar")
     public String editarBus(@RequestParam String id,
                              @RequestParam String placa,
-                             @RequestParam(required = false) String rutas,
+                             @RequestParam(required = false) List<String> rutas,
                              @RequestParam(defaultValue = "TRONCAL", required = false) String tipo,
-                             RedirectAttributes redirectAttributes) {
+                             RedirectAttributes redirectAttributes, HttpSession session) {
+        SistemaTransporte sistema = sistemaActual(session);
 
         Bus bus = busRepository.findById(id).orElse(null);
-        if (bus == null) {
+        if (bus == null || bus.getSistemaTransporte() != sistema) {
             redirectAttributes.addFlashAttribute("error", "Ese bus no existe ❌");
             return "redirect:/admin/horarios/buses";
         }
@@ -547,15 +693,26 @@ public class HorarioController {
             return "redirect:/admin/horarios/buses";
         }
 
-        String rutasTexto = rutas == null ? "" : rutas;
-        List<String> listaRutas = Arrays.stream(rutasTexto.split(","))
+        List<String> listaRutas = (rutas == null ? List.<String>of() : rutas).stream()
+                .flatMap(valor -> Arrays.stream(valor.split(",")))
                 .map(String::trim)
                 .filter(r -> !r.isEmpty())
                 .collect(Collectors.toList());
 
+        if (sistema == SistemaTransporte.TRANSMILENIO) {
+            List<String> rutasValidas = catalogoRutasTransmilenioService.obtenerRutasActivas().stream()
+                    .map(com.transcaribe.transcaribe.Model.RutaTransmilenio::getEtiqueta).toList();
+            if (listaRutas.isEmpty() || !rutasValidas.containsAll(listaRutas)) {
+                redirectAttributes.addFlashAttribute("error", "Selecciona al menos un servicio troncal válido.");
+                return "redirect:/admin/horarios/buses";
+            }
+            tipo = Bus.TIPO_TRONCAL;
+        }
+
         bus.setPlaca(placaLimpia);
         bus.setRutas(listaRutas);
         bus.setTipo(tipo);
+        bus.setSistemaTransporte(sistema);
         busRepository.save(bus);
 
         redirectAttributes.addFlashAttribute("mensaje", "Bus " + placaLimpia + " actualizado correctamente ✅");

@@ -34,4 +34,8 @@ public enum SistemaTransporte {
     public boolean permiteSimularViaje() {
         return this == TRANSCARIBE || this == TRANSMILENIO;
     }
+
+    public boolean permiteGestionConductores() {
+        return this == TRANSCARIBE || this == TRANSMILENIO;
+    }
 }

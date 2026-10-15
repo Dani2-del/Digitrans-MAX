@@ -965,6 +965,23 @@ table.mod-table .card-btn { margin: 2px 4px; padding: 8px 12px; font-size: 0.9re
   transform: translateY(-2px);
 }
 
+body[data-sistema="TRANSMILENIO"] {
+  --tinta: #9d1733;
+  --tinta-2: #751126;
+  --caribe: #c8102e;
+  --caribe-soft: #fde9ed;
+  --coral: #c8102e;
+  --coral-2: #9d1733;
+  --mango: #f4d03f;
+  --mango-soft: #fff7d6;
+  --arena: #fffafa;
+  --linea: rgba(200, 16, 46, .18);
+}
+body[data-sistema="TRANSMILENIO"] .conductor-navbar {
+  background-image: linear-gradient(120deg, #9d1733, #c8102e);
+  border-bottom: 3px solid #f4d03f;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

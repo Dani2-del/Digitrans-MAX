@@ -100,6 +100,7 @@ public class AdminController {
         model.addAttribute("sistemaActual", sistemaActual);
         model.addAttribute("esTransmilenio", sistemaActual == SistemaTransporte.TRANSMILENIO);
         model.addAttribute("tieneRutasConfiguradas", sistemaActual.tieneRutasConfiguradas());
+        model.addAttribute("permiteGestionConductores", sistemaActual.permiteGestionConductores());
         model.addAttribute("esAdministradorGlobal", authentication.getAuthorities().stream()
                 .anyMatch(autoridad -> "ROLE_ADMIN".equals(autoridad.getAuthority())));
         usuarioRepository.findByCorreo(authentication.getName()).ifPresent(usuario ->
@@ -202,7 +203,8 @@ public class AdminController {
         model.addAttribute("fechaHasta", fechaHasta);
         model.addAttribute("estadoSeleccionado", estado);
         model.addAttribute("verificacionSeleccionada", verificacion);
-        model.addAttribute("buses", busRepository.findAll());
+        model.addAttribute("buses", busRepository.findAll().stream()
+                .filter(bus -> bus.getSistemaTransporte() == sistemaActual).toList());
         return "admin/dashboard";
     }
 
@@ -357,7 +359,7 @@ public class AdminController {
         if (sistemaActual == null || !sistemaActual.estaDisponible()) {
             return ResponseEntity.badRequest().build();
         }
-        if (!sistemaActual.tieneRutasConfiguradas() && incluirRutas) {
+        if (!sistemaActual.permiteGestionConductores() && incluirRutas) {
             return ResponseEntity.badRequest().build();
         }
 
@@ -452,10 +454,9 @@ public class AdminController {
                 return ResponseEntity.badRequest().body(response);
             }
             if (Usuario.ROLE_CONDUCTOR.equals(role)
-                    && sistemaActual != SistemaTransporte.TRANSCARIBE
-                    && (opt.isEmpty() || !Usuario.ROLE_CONDUCTOR.equals(opt.get().getRole()))) {
+                    && (sistemaActual == null || !sistemaActual.permiteGestionConductores())) {
                 response.put("status", "error");
-                response.put("message", "El panel de conductor y las operaciones de buses están disponibles solo para Transcaribe.");
+                response.put("message", "La gestión de conductores está disponible para Transcaribe y TransMilenio.");
                 return ResponseEntity.badRequest().body(response);
             }
             if (Usuario.ROLE_MODERATOR.equals(role)
@@ -470,6 +471,12 @@ public class AdminController {
                 u.setCorreo(correo);
                 boolean eraModerador = Usuario.ROLE_MODERATOR.equals(u.getRole());
                 u.setRole(role);
+                if (Usuario.ROLE_CONDUCTOR.equals(role)) {
+                    u.setSitm(sistemaActual);
+                    if (sistemaActual != SistemaTransporte.TRANSCARIBE) {
+                        u.setBusAsignado(null);
+                    }
+                }
                 u.setSistemaAsignado(Usuario.ROLE_MODERATOR.equals(role) ? sistemaAsignado : null);
                 if (eraModerador && !Usuario.ROLE_MODERATOR.equals(role) && u.getSitm() == null) {
                     u.setSitm(sistemaActual);
